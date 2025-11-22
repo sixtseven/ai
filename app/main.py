@@ -330,7 +330,8 @@ def _call_openai_api(
         "1. **NEVER use the word 'upsell'** in the output. Use words like 'upgrade', 'premium', 'spacious', or 'comfort'.\n"
         "2. Focus on specific benefits: interior space for the specific number of passengers, trunk capacity for their luggage, and premium features (speed, comfort, technology).\n"
         "3. Tone: Enthusiastic, professional, and convincing.\n"
-        "4. Format: Return ONLY a JSON array of exactly three strings."
+        "4. Format: Return ONLY a JSON array of exactly three strings.\n"
+        "5. Each reason should be concise (max 10 words) and highlight a unique benefit.\n"
     )
 
     user_msg = (
