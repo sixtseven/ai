@@ -8,7 +8,7 @@ import numpy as np
 
 
 # ---------- CONFIG ----------
-CLF_PATH = "/home/user/develop/hackatum25/ai/hawaii_frame_clf.joblib"
+CLF_PATH = "hawaii_frame_clf.joblib"
 IMAGE_SIZE = (224, 224)
 # ----------------------------
 
