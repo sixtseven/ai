@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from .features import extract_features_from_buf
+from .addons import fetch_and_save_addons
 
 # Load environment variables
 load_dotenv()
@@ -485,6 +486,23 @@ def recommend(
     # Generate AI Reasons & Summary
     ai_output = generate_upsell_reasons(base, upsell_vehicle, people, luggages)
 
+    # --- ADDONS SELECTION LOGIC ---
+    addons_result = []
+    if people >= 2:
+        try:
+            # Fetch all available addons from the API
+            all_addons = fetch_and_save_addons(booking_id)
+            if isinstance(all_addons, list):
+                # Look for the "Additional Driver" addon
+                for addon in all_addons:
+                    title = addon.get("title") or addon.get("name") or ""
+                    if "driver" in title.lower():
+                        addons_result = [addon]
+                        break
+        except Exception:
+            # Fail silently if addons cannot be fetched
+            pass
+
     resp_payload = {
         "bookingId": booking_id,
         "features_used": {
@@ -497,6 +515,7 @@ def recommend(
         "reason": chosen["reason"],
         "upsell_reasons": ai_output.get("reasons", []),
         "upsell_summary": ai_output.get("summary", ""),
+        "addons": addons_result,
     }
 
     # Save to local file for debug/demo
