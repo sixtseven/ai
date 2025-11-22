@@ -36,13 +36,13 @@ class Vehicle(BaseModel):
     price: Optional[float] = None
     seats: Optional[int] = None
     luggage: Optional[int] = None
+    upsell_titles: List[str] = [] 
     raw: Optional[Dict[str, Any]] = None
 
 
 # --- HELPER FUNCTIONS ---
 
-
-def get_features_for_booking(booking_id: str) -> Dict[str, int]:
+def get_features_for_booking(booking_id: str) -> Dict[str, Any]:
     """Mocked features provider."""
     try:
         v = abs(hash(booking_id))
@@ -50,13 +50,15 @@ def get_features_for_booking(booking_id: str) -> Dict[str, int]:
         v = 42
     people = 2 + (v % 4)  # 2..5
     luggages = 0 + (v % 3)  # 0..2
-    hawaii_shirt_present = False
+    
+    # Mock Hawaii context: 50% chance based on ID
+    hawaii = True
+    
     return {
-        "number_of_people": int(people),
+        "number_of_people": int(people), 
         "number_of_luggages": int(luggages),
-        "hawaii_shirt_present": hawaii_shirt_present,
+        "hawaii_shirt_present": hawaii
     }
-
 
 def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
     """Parses raw vehicle/deal data into a structured Vehicle object."""
@@ -167,25 +169,30 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
                     break
             except Exception:
                 continue
+                
+    # Upsell Titles (e.g., "Convertible Luxury")
+    upsell_titles = []
+    if isinstance(vehicle_raw, dict):
+        reasons = vehicle_raw.get("upsellReasons") or []
+        for r in reasons:
+            if isinstance(r, dict) and "title" in r:
+                upsell_titles.append(r["title"])
 
     return Vehicle(
-        id=str(vid) if vid is not None else None,
-        name=name,
-        price=price,
-        seats=seats,
-        luggage=luggage,
-        raw=deal,
+        id=str(vid) if vid is not None else None, 
+        name=name, 
+        price=price, 
+        seats=seats, 
+        luggage=luggage, 
+        upsell_titles=upsell_titles,
+        raw=deal
     )
-
 
 # -----------------------------------------------------------
 # --- DECISION TREE UPSELL SELECTION ---
 # -----------------------------------------------------------
 
-
-def choose_best_upsell(
-    base: Vehicle, candidates: List[Vehicle], people: int, luggages: int
-) -> Dict[str, Any]:
+def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, luggages: int, hawaii_shirt_present: bool = False) -> Dict[str, Any]:
     """
     Selects the best upgrade option using a Decision Tree approach.
     """
@@ -197,6 +204,25 @@ def choose_best_upsell(
         return {"vehicle": None, "reason": "No candidates available with price > 0"}
 
     base_price = base.price or 0.0
+
+    # --- Step 0.5: Hawaii Override (Convertible Luxury) ---
+    if hawaii_shirt_present:
+        convertibles = [v for v in valid_candidates if "Convertible Luxury" in v.upsell_titles]
+        
+        if convertibles:
+            # If multiple convertibles exist, pick the cheapest one to increase conversion chance
+            best_vehicle = sorted(convertibles, key=lambda x: x.price)[0]
+            price_diff = max(0.0, (best_vehicle.price or 0) - base_price)
+            return {
+                "vehicle": best_vehicle,
+                "reason": {
+                    "people": people,
+                    "luggages": luggages,
+                    "decision_path": "hawaii_override_convertible",
+                    "description": "Context 'Hawaii' detected. Prioritizing 'Convertible Luxury'.",
+                    "price_diff": price_diff
+                }
+            }
 
     # --- Step 1: Define Decision Thresholds ---
     min_seats_required = 5 if people > 2 else people
@@ -302,7 +328,6 @@ def _call_openai_api(
         "2. Focus on specific benefits: interior space for the specific number of passengers, trunk capacity for their luggage, and premium features (speed, comfort, technology).\n"
         "3. Tone: Enthusiastic, professional, and convincing.\n"
         "4. Format: Return ONLY a JSON array of exactly three strings."
-        "5. Each reason should be concise (max 10 words) and impactful.\n"
     )
 
     user_msg = (
@@ -447,17 +472,19 @@ def recommend(
     )
     base = sorted_by_price[0]
 
-    # Mock Features if not provided
-    if people is None or luggages is None:
-        features = get_features_for_booking(booking_id)
-        people = people if people is not None else features.get("numberOfPeople", 1)
-        luggages = (
-            luggages if luggages is not None else features.get("numberOfLuggages", 0)
-        )
+    # Mock Features
+    features = get_features_for_booking(booking_id)
+    
+    if people is None:
+        people = features.get("number_of_people", 1)
+    if luggages is None:
+        luggages = features.get("number_of_luggages", 0)
+    
+    hawaii_present = features.get("hawaii_shirt_present", False)
 
     # Select Upsell
     other_candidates = [v for v in vehicles if v.id != base.id]
-    chosen = choose_best_upsell(base, other_candidates, people, luggages)
+    chosen = choose_best_upsell(base, other_candidates, people, luggages, hawaii_shirt_present=hawaii_present)
     upsell_vehicle = chosen["vehicle"]
 
     # Generate AI Reasons
@@ -465,7 +492,11 @@ def recommend(
 
     resp_payload = {
         "bookingId": booking_id,
-        "features_used": {"numberOfPeople": people, "numberOfLuggages": luggages},
+        "features_used": {
+            "number_of_people": people, 
+            "number_of_luggages": luggages,
+            "hawaii_shirt_present": hawaii_present
+        },
         "base_car": base.dict(),
         "upsell_car": upsell_vehicle.dict() if upsell_vehicle else None,
         "reason": chosen["reason"],
@@ -478,6 +509,7 @@ def recommend(
             json.dump(resp_payload, fh, indent=2, ensure_ascii=False)
     except Exception:
         pass
+
     return resp_payload
 
 
