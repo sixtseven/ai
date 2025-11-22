@@ -1,0 +1,8 @@
+torch>=1.13.0
+torchvision>=0.14.0
+opencv-python
+numpy
+Pillow
+scikit-learn
+# Segment Anything (Meta) — install from the repo if pip package not available
+git+https://github.com/facebookresearch/segment-anything.git
