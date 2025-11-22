@@ -4,97 +4,111 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib
 from PIL import Image
-from sam3.model_builder import build_sam3_image_model
-from sam3.model.sam3_image_processor import Sam3Processor
+from ultralytics import YOLO
+import numpy as np
 
 
-def overlay_masks(image: Image.Image, masks: torch.Tensor, alpha: float = 0.5):
+LUGGAGE_CLASSES = {"backpack", "handbag", "suitcase"}
+
+
+def draw_detections(image: Image.Image, boxes, classes, scores, class_names, score_thresh: float = 0.25):
     """
-    Overlay segmentation masks on the input image using different colors.
+    Draw bounding boxes and labels on the input image for the selected detections.
+
     image: PIL.Image
-    masks: Tensor (N, H, W) with binary masks
-    returns: PIL.Image (RGBA)
+    boxes: (N, 4) xyxy tensor/array
+    classes: (N,) class indices
+    scores: (N,) confidence scores
+    class_names: list of class names indexed by class id
+    returns: annotated PIL.Image
     """
+    image_np = np.array(image)
+    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    ax.imshow(image_np)
+    ax.axis("off")
 
-    if masks is None or len(masks) == 0:
-        print("No masks detected. Returning original image.")
-        return image
+    for box, cls_id, score in zip(boxes, classes, scores):
+        cls_id = int(cls_id)
+        label = class_names[cls_id]
 
-    image = image.convert("RGBA")
+        if label not in LUGGAGE_CLASSES:
+            continue
 
-    masks_np = (masks.cpu().numpy() * 255).astype("uint8")
-    num_masks = masks_np.shape[0]
+        if score < score_thresh:
+            continue
 
-    cmap = matplotlib.colormaps.get_cmap("rainbow").resampled(max(num_masks, 1))
-    colors = [tuple(int(c * 255) for c in cmap(i)[:3]) for i in range(num_masks)]
+        x1, y1, x2, y2 = box
 
-    for mask_np, color in zip(masks_np, colors):
-        mask_img = Image.fromarray(mask_np)
-        overlay = Image.new("RGBA", image.size, color + (0,))
+        cmap = matplotlib.colormaps.get_cmap("tab10")
+        color = cmap(cls_id % 10)
 
-        alpha_mask = mask_img.point(lambda p: int(p * alpha))
-        overlay.putalpha(alpha_mask)
+        rect = plt.Rectangle(
+            (x1, y1),
+            x2 - x1,
+            y2 - y1,
+            linewidth=2,
+            edgecolor=color,
+            facecolor="none"
+        )
+        ax.add_patch(rect)
 
-        image = Image.alpha_composite(image, overlay)
+        caption = f"{label} {score:.2f}"
+        ax.text(
+            x1,
+            y1 - 2,
+            caption,
+            fontsize=10,
+            color="white",
+            bbox=dict(facecolor=color, edgecolor="none", alpha=0.7, pad=2),
+        )
 
-    return image
+    fig.canvas.draw()
+    annotated = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    annotated = annotated.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    plt.close(fig)
+
+    return Image.fromarray(annotated)
 
 
-def run_sam3(image_path: str, output_path: str):
-    print("Loading SAM3 model...")
-    model = build_sam3_image_model()
-    processor = Sam3Processor(model)
-
+def run_yolo(image_path: str, output_path: str):
+    model = YOLO("yolo11n.pt")
     print(f"Loading image: {image_path}")
     image = Image.open(image_path).convert("RGB")
 
-    print("Running inference...")
-    state = processor.set_image(image)
+    print("Running YOLO inference...")
+    results = model(image)[0]
 
-    # text prompt
-    text_prompt = "suitcase, backpack, luggage, bag"
+    boxes = results.boxes.xyxy.cpu().numpy()  
+    classes = results.boxes.cls.cpu().numpy()  
+    scores = results.boxes.conf.cpu().numpy()
 
-    # get SAM3 output
-    output = processor.set_text_prompt(
-        state=state,
-        prompt=text_prompt
+    class_names = model.names  
+
+    print(f"Total detections: {len(boxes)}")
+    luggage_count = sum(
+        1
+        for cls_id, score in zip(classes, scores)
+        if class_names[int(cls_id)] in LUGGAGE_CLASSES and score >= 0.25
     )
+    print(f"Luggage-related detections (backpack/handbag/suitcase): {luggage_count}")
 
-    masks, boxes, scores = output["masks"], output["boxes"], output["scores"]
+    annotated_image = draw_detections(image, boxes, classes, scores, class_names)
 
-    print(f"Detected {len(masks)} objects")
-    if len(masks) > 0:
-        print("Scores:", scores)
-
-    overlay_image = overlay_masks(image, masks)
-
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
-    axes[0].imshow(image)
-    axes[0].set_title("Original")
-    axes[0].axis("off")
-
-    axes[1].imshow(overlay_image)
-    axes[1].set_title("Luggage / Bags (SAM3)")
-    axes[1].axis("off")
-
-    plt.tight_layout()
-    fig.savefig(output_path, bbox_inches="tight")
-    plt.close(fig)
-
-    print(f"Saved output to {output_path}")
+    annotated_image.save(output_path)
+    print(f"Saved annotated image to {output_path}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="SAM3 luggage detector with overlay.")
+    parser = argparse.ArgumentParser(description="YOLO luggage detector with bounding boxes.")
     parser.add_argument("image_path", type=str, help="Path to input image")
-    parser.add_argument("--output", type=str, default="output.png", help="Path to save output visualization")
+    parser.add_argument("--output", type=str, default="output_yolo.png", help="Path to save output image")
 
     args = parser.parse_args()
 
     if not os.path.isfile(args.image_path):
         raise FileNotFoundError(f"Image not found: {args.image_path}")
 
-    run_sam3(args.image_path, args.output)
+    run_yolo(args.image_path, args.output)
 
 
 if __name__ == "__main__":
