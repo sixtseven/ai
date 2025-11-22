@@ -10,12 +10,13 @@ import joblib
 import numpy as np
 import torch
 import torch.nn as nn
-from .features import extract_features_from_buf
 from PIL import Image
-from .state import buf
 from torchvision import models, transforms
 from ultralytics.models import YOLO
 from ultralytics.utils import LOGGER
+
+from .features import extract_features_from_buf
+from .state import buf
 
 LOGGER.setLevel("CRITICAL")
 
@@ -107,13 +108,13 @@ while True:
             thickness = 2
             label_text = f"{label_lookup} {confidence:.2f}"
             cv2.putText(img, label_text, org, font, fontScale, color, thickness)
-    if frame_count % 30 == 0:
+    if frame_count % 8 == 0:
         emb = get_embedding_from_frame(img, feature_extractor)
         prob = clf.predict_proba([emb])[0]
         last_hawaii_prob = float(prob[1])
         buf.append((person_count, luggage_count, last_hawaii_prob))
 
-    hawaii_text = f"Hawaii: ({last_hawaii_prob:.2f})"
+    hawaii_text = f"Hawaii: ({'True' if last_hawaii_prob >= 0.99 else 'False'} {last_hawaii_prob:.3f})"
 
     summary_text = f"Persons: {person_count}  Luggage: {luggage_count}  {hawaii_text}"
     cv2.putText(

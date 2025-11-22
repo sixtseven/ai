@@ -1,3 +1,3 @@
 from collections import deque
 
-buf = deque(maxlen=60)
+buf = deque(maxlen=5)
