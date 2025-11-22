@@ -1,6 +1,13 @@
-from ultralytics import YOLO
-import cv2
 from collections import deque
+
+import cv2
+import joblib
+import numpy as np
+import torch
+import torch.nn as nn
+from PIL import Image
+from torchvision import models, transforms
+from ultralytics import YOLO
 
 buf = deque(maxlen=200)
 
@@ -11,9 +18,46 @@ cap.set(4, 720)
 model = YOLO("yolo11n.pt")
 
 TARGET_CLASSES = {"person", "backpack", "handbag", "suitcase"}
-CONF_THRESHOLD = 0.5  
+CONF_THRESHOLD = 0.5
 
 classNames = model.names if hasattr(model, "names") else list(TARGET_CLASSES)
+
+CLF_PATH = "/home/user/develop/hackatum25/ai/hawaii_frame_clf.joblib"
+IMAGE_SIZE = (224, 224)
+
+transform = transforms.Compose(
+    [
+        transforms.Resize(IMAGE_SIZE),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
+
+
+def load_feature_extractor():
+    backbone = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+    modules = list(backbone.children())[:-1]
+    fe = nn.Sequential(*modules)
+    fe.eval()
+    return fe
+
+
+def get_embedding_from_frame(frame_bgr, feature_extractor):
+    rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(rgb)
+    x = transform(img).unsqueeze(0)
+    with torch.no_grad():
+        feat = feature_extractor(x)
+        feat = feat.view(1, -1)
+    return feat.cpu().numpy()[0]
+
+
+clf = joblib.load(CLF_PATH)
+feature_extractor = load_feature_extractor()
+
+last_hawaii_pred = False
+last_hawaii_prob = 0.0
+frame_count = 0
 
 while True:
     success, img = cap.read()
@@ -27,7 +71,7 @@ while True:
 
         for box in boxes:
             x1, y1, x2, y2 = box.xyxy[0]
-            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2) 
+            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
             confidence = float(box.conf[0])
             if confidence < CONF_THRESHOLD:
@@ -56,14 +100,28 @@ while True:
             label_text = f"{label_lookup} {confidence:.2f}"
             cv2.putText(img, label_text, org, font, fontScale, color, thickness)
 
-    print(f"Persons in frame: {person_count} | Luggage items in frame: {luggage_count}")
+    frame_count += 1
+    if frame_count % 50 == 0:
+        emb = get_embedding_from_frame(img, feature_extractor)
+        prob = clf.predict_proba([emb])[0]
+        last_hawaii_pred = bool(int(np.argmax(prob)))
+        last_hawaii_prob = float(prob[1])
 
-    summary_text = f"Persons: {person_count}  Luggage: {luggage_count}"
-    cv2.putText(img, summary_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2)
+    hawaii_text = (
+        f"Hawaii: {'Yes' if last_hawaii_pred else 'No'} ({last_hawaii_prob:.2f})"
+    )
+    print(
+        f"Persons in frame: {person_count} | Luggage items in frame: {luggage_count} | {hawaii_text}"
+    )
 
-    buf.append((person_count, luggage_count))
-    cv2.imshow('Webcam', img)
-    if cv2.waitKey(1) == ord('q'):
+    summary_text = f"Persons: {person_count}  Luggage: {luggage_count}  {hawaii_text}"
+    cv2.putText(
+        img, summary_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2
+    )
+
+    buf.append((person_count, luggage_count, last_hawaii_pred))
+    cv2.imshow("Webcam", img)
+    if cv2.waitKey(1) == ord("q"):
         break
 
 cap.release()
