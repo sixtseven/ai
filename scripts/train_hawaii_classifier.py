@@ -30,7 +30,6 @@ def log_transformed_image(img, tfm, out_path):
     save_image(x, out_path)
 
 
-# Transform used for validation / inference (no augmentation)
 val_transform = transforms.Compose(
     [
         transforms.Resize((224, 224)),
@@ -42,7 +41,7 @@ val_transform = transforms.Compose(
     ]
 )
 
-# Transform used for TRAINING only (with augmentation)
+# transform used for TRAINING only
 train_transform = transforms.Compose(
     [
         transforms.Resize((224, 224)),
