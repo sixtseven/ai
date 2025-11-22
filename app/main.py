@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-app = FastAPI(title="Vehicle Upsell Recommender")
+app = FastAPI(title="Vehicle Upsell Recommender (OpenAI)")
 
 # --- LOGGING CONFIGURATION ---
 LOG_FILE = os.environ.get("LOG_FILE", "out.txt")
@@ -147,24 +147,15 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
     return Vehicle(id=str(vid) if vid is not None else None, name=name, price=price, seats=seats, luggage=luggage, raw=deal)
 
 # -----------------------------------------------------------
-# --- DECISION TREE UPSELL SELECTION (UPDATED) ---
+# --- DECISION TREE UPSELL SELECTION ---
 # -----------------------------------------------------------
 
 def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, luggages: int) -> Dict[str, Any]:
     """
     Selects the best upgrade option using a Decision Tree approach.
-    
-    Global Constraints:
-    - Upsell Price MUST be > 0.
-    
-    Decision Rules:
-    1. If people > 2 -> MUST have >= 5 seats.
-    2. If luggages >= 1 -> MUST have >= 4 luggage capacity.
-    3. Among valid matches, prefer the one with the lowest price.
     """
     
     # --- Step 0: Global Filter (Price > 0) ---
-    # We remove any car with price None or <= 0 immediately from consideration.
     valid_candidates = [
         v for v in candidates 
         if v.price is not None and v.price > 0.0
@@ -176,13 +167,10 @@ def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, lu
     base_price = base.price or 0.0
 
     # --- Step 1: Define Decision Thresholds ---
-    # Rule 1: People
     min_seats_required = 5 if people > 2 else people
-    
-    # Rule 2: Luggage
     min_luggage_required = 4 if luggages >= 1 else luggages
 
-    # --- Step 2: Filter Candidates (The Decision Tree) ---
+    # --- Step 2: Filter Candidates ---
     strict_matches = []
     
     for v in valid_candidates:
@@ -201,20 +189,16 @@ def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, lu
     decision_type = ""
 
     if strict_matches:
-        # Branch A: We found cars meeting ALL strict rules.
-        # Select the one with the lowest price among them (best value for the user)
         best_vehicle = sorted(strict_matches, key=lambda x: x.price)[0]
         decision_type = "strict_rule_match"
     else:
-        # Branch B: FALLBACK. No car met the strict criteria.
-        # Fallback logic: Prioritize SEATS first (essential).
+        # Fallback logic
         seat_matches = [v for v in valid_candidates if (v.seats or 0) >= min_seats_required]
         
         if seat_matches:
             best_vehicle = sorted(seat_matches, key=lambda x: x.price)[0]
             decision_type = "fallback_seats_only"
         else:
-            # Branch C: Deep Fallback. Just return the cheapest candidate remaining (that costs > 0).
             best_vehicle = sorted(valid_candidates, key=lambda x: x.price)[0]
             decision_type = "fallback_cheapest"
 
@@ -232,40 +216,42 @@ def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, lu
     return {"vehicle": best_vehicle, "reason": reason}
 
 # -----------------------------------------------------------
-# --- GENERATE UPSELL REASONS (GEMINI EXCLUSIVE) ---
+# --- GENERATE UPSELL REASONS (OPENAI UPDATED) ---
 # -----------------------------------------------------------
 
 def generate_upsell_reasons(base: Vehicle, upsell: Optional[Vehicle], people: int, luggages: int) -> List[str]:
     """
-    Generate up to 3 personalized, human-readable reasons to upsell using Gemini.
-    Falls back to a rule-based generator if Gemini fails or API key is missing.
+    Generate up to 3 personalized reasons to upsell using OpenAI.
+    Falls back to a rule-based generator if OpenAI fails or API key is missing.
     """
     if upsell is None:
         return []
 
-    gemini_key = os.environ.get("GEMINI_API_KEY")
+    # Check for OPENAI key
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    use_openai = os.environ.get("OPENAI_USE", "1") == "1"
     
-    # 1. Attempt Gemini Generation
-    if gemini_key:
+    # 1. Attempt OpenAI Generation
+    if openai_key and use_openai:
         try:
-            return _call_gemini_api(gemini_key, base, upsell, people, luggages)
+            return _call_openai_api(openai_key, base, upsell, people, luggages)
         except Exception as e:
-            logger.error(f"Gemini generation failed, falling back to rules: {e}")
+            logger.error(f"OpenAI generation failed, falling back to rules: {e}")
             # Proceed to rule-based fallback below
     else:
-        logger.warning("GEMINI_API_KEY not found. Using rule-based fallback.")
+        logger.warning("OPENAI_API_KEY not found or disabled. Using rule-based fallback.")
 
-    # 2. Rule-Based Fallback (if Gemini fails or is missing)
+    # 2. Rule-Based Fallback
     return _generate_rules_based_reasons(base, upsell, people, luggages)
 
 
-def _call_gemini_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, luggages: int) -> List[str]:
-    """Internal function to handle the HTTP request to Gemini."""
+def _call_openai_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, luggages: int) -> List[str]:
+    """Internal function to handle the HTTP request to OpenAI (ChatGPT)."""
     
-    gemini_model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
-    base_path = f"https://generativelanguage.googleapis.com/v1/models/{gemini_model}:generateContent"
+    openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+    url = "https://api.openai.com/v1/chat/completions"
     
-    # --- UPDATED PROMPT LOGIC ---
+    # --- PROMPTS ---
     system_msg = (
         "You are a persuasive automotive sales copywriter. You are recommending a premium vehicle upgrade to a customer. "
         "Your goal is to provide convincing arguments why the user should buy the more expensive car based on their specific needs.\n\n"
@@ -274,6 +260,7 @@ def _call_gemini_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, 
         "2. Focus on specific benefits: interior space for the specific number of passengers, trunk capacity for their luggage, and premium features (speed, comfort, technology).\n"
         "3. Tone: Enthusiastic, professional, and convincing.\n"
         "4. Format: Return ONLY a JSON array of exactly three strings."
+        "5. Each reason should be concise (max 10 words) and impactful.\n"
     )
 
     user_msg = (
@@ -286,20 +273,22 @@ def _call_gemini_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, 
     )
     # ----------------------------
 
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
     body = {
-        "contents": [{
-            "parts": [{"text": system_msg + "\n\n" + user_msg}], 
-            "role": "user"
-        }],
-        "config": {
-            "temperature": float(os.environ.get("GEMINI_TEMPERATURE", "0.7"))
-        }
+        "model": openai_model,
+        "messages": [
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": user_msg}
+        ],
+        "temperature": float(os.environ.get("OPENAI_TEMPERATURE", "0.7"))
     }
 
     # API Call with Retries
-    max_attempts = int(os.environ.get("GEMINI_MAX_RETRIES", "3"))
-    url = f"{base_path}?key={api_key}"
-    headers = {"Content-Type": "application/json"}
+    max_attempts = int(os.environ.get("OPENAI_MAX_RETRIES", "3"))
     
     resp = None
     last_err = None
@@ -312,7 +301,7 @@ def _call_gemini_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, 
             if resp.status_code == 429: # Rate limit
                 time.sleep(2 ** attempt) 
                 continue
-            if 400 <= resp.status_code < 500: # Client error, do not retry
+            if 400 <= resp.status_code < 500: # Client error (e.g., Context length), do not retry
                 break
         except requests.RequestException as e:
             last_err = e
@@ -320,25 +309,27 @@ def _call_gemini_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, 
             
     if resp is None or resp.status_code != 200:
         error_detail = resp.text if resp else str(last_err)
-        raise Exception(f"Gemini API Error: {error_detail}")
+        raise Exception(f"OpenAI API Error: {error_detail}")
 
     # Parse Response
     try:
         j = resp.json()
-        # Navigate standard Gemini response structure
-        text = j["candidates"][0]["content"]["parts"][0]["text"]
+        # Navigate standard OpenAI response structure
+        content = j["choices"][0]["message"]["content"]
         
-        # Regex extract JSON list
-        m = re.search(r"\[.*\]", str(text), flags=re.S)
+        # Regex extract JSON list (safeguard against Markdown code blocks)
+        m = re.search(r"\[.*\]", str(content), flags=re.S)
         if not m:
-            raise ValueError("No JSON array found in Gemini text")
-        
-        arr = json.loads(m.group(0))
+            # Attempt to parse raw if regex fails (sometimes it returns just the array)
+            arr = json.loads(content)
+        else:
+            arr = json.loads(m.group(0))
+            
         if isinstance(arr, list):
             return [str(x).strip() for x in arr][:3]
         return []
     except Exception as e:
-        raise Exception(f"Failed to parse Gemini response: {e}")
+        raise Exception(f"Failed to parse OpenAI response: {e}")
 
 def _generate_rules_based_reasons(base: Vehicle, upsell: Vehicle, people: int, luggages: int) -> List[str]:
     """Fallback logic if AI is unavailable."""
@@ -347,15 +338,8 @@ def _generate_rules_based_reasons(base: Vehicle, upsell: Vehicle, people: int, l
     def safe_int(x):
         return int(x) if x is not None else None
 
-    base_seats = safe_int(base.seats)
-    upsell_seats = safe_int(upsell.seats)
-    base_lug = safe_int(base.luggage)
-    upsell_lug = safe_int(upsell.luggage)
-
     reasons.append(f"Spacious interior, provides perfect experience for {people} people.")
-    
     reasons.append(f"Generous trunk space, easily fits all your luggage needs.")
-    
     reasons.append(f"Enhanced comfort and premium features for a superior driving experience.")
 
     return reasons[:3]
@@ -367,7 +351,7 @@ def _generate_rules_based_reasons(base: Vehicle, upsell: Vehicle, people: int, l
 
 @app.get("/api/booking/{booking_id}/recommend")
 def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Optional[int] = Query(None)):
-    """Fetch vehicles for booking and recommend an upsell using Gemini."""
+    """Fetch vehicles for booking and recommend an upsell using OpenAI."""
     
     VEHICLE_API_BASE = "https://hackatum25.sixt.io/"
     url = f"{VEHICLE_API_BASE}/api/booking/{booking_id}/vehicles"
@@ -430,15 +414,14 @@ def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Op
             json.dump(resp_payload, fh, indent=2, ensure_ascii=False)
     except Exception:
         pass
-
     return resp_payload
 
 
-@app.get("/health/gemini")
-def gemini_health():
-    """Checks if GEMINI_API_KEY is configured."""
-    key = os.environ.get("GEMINI_API_KEY")
+@app.get("/health/ai")
+def ai_health():
+    """Checks if OPENAI_API_KEY is configured."""
+    key = os.environ.get("OPENAI_API_KEY")
     return {
-        "gemini_configured": bool(key), 
-        "model": os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+        "openai_configured": bool(key), 
+        "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
     }
