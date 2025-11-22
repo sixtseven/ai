@@ -1,16 +1,34 @@
 from typing import Any, Dict, List, Optional
 import os
 import logging
-
 import requests
 import json
+import time
+import random
+import re
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
 app = FastAPI(title="Vehicle Upsell Recommender")
+
+# --- LOGGING CONFIGURATION ---
+LOG_FILE = os.environ.get("LOG_FILE", "out.txt")
+logging.basicConfig(
+    level=logging.INFO,
+    filename=LOG_FILE,
+    filemode="a",
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    force=True,
+)
 logger = logging.getLogger("uvicorn.error")
+logger.propagate = False
 
-
+# --- CLASS DEFINITIONS ---
 class Vehicle(BaseModel):
     id: Optional[str] = None
     name: Optional[str] = None
@@ -19,13 +37,10 @@ class Vehicle(BaseModel):
     luggage: Optional[int] = None
     raw: Optional[Dict[str, Any]] = None
 
+# --- HELPER FUNCTIONS ---
 
 def get_features_for_booking(booking_id: str) -> Dict[str, int]:
-    """Mocked features provider. Replace with your real service later.
-
-    Returns a dict containing numberOfPeople and numberOfLuggages.
-    """
-    # Simple deterministic mock based on booking id to make testing repeatable
+    """Mocked features provider."""
     try:
         v = abs(hash(booking_id))
     except Exception:
@@ -34,18 +49,17 @@ def get_features_for_booking(booking_id: str) -> Dict[str, int]:
     luggages = 0 + (v % 3)  # 0..2
     return {"numberOfPeople": int(people), "numberOfLuggages": int(luggages)}
 
-
 def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
-    # The payload might be a deal object with nested 'vehicle' and 'pricing' (Sixt hackatum style)
+    """Parses raw vehicle/deal data into a structured Vehicle object."""
     deal = raw
     vehicle_raw = raw
     pricing = None
-    # If this is a deal wrapper, unwrap
+    
     if isinstance(raw, dict) and "vehicle" in raw:
         vehicle_raw = raw.get("vehicle") or {}
         pricing = raw.get("pricing") or {}
 
-    # ids/names
+    # IDs and Names
     vid = None
     if isinstance(vehicle_raw, dict):
         vid = vehicle_raw.get("id") or vehicle_raw.get("vehicleId")
@@ -60,7 +74,7 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
     if not name:
         name = raw.get("name") or raw.get("vehicleType") or raw.get("label")
 
-    # price: prefer pricing.totalPrice.amount, then displayPrice.amount, else top-level price keys
+    # Price Logic
     price = None
     try:
         if isinstance(pricing, dict):
@@ -73,7 +87,6 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
         price = None
 
     if price is None:
-        # fallback to vehicleCost or common keys
         if isinstance(vehicle_raw, dict) and "vehicleCost" in vehicle_raw and isinstance(vehicle_raw["vehicleCost"], dict) and "value" in vehicle_raw["vehicleCost"]:
             try:
                 price = float(vehicle_raw["vehicleCost"]["value"]) / 100.0 if vehicle_raw["vehicleCost"]["value"] > 1000 else float(vehicle_raw["vehicleCost"]["value"])
@@ -88,7 +101,7 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
                     except Exception:
                         pass
 
-    # seats and luggage
+    # Seats
     seats = None
     if isinstance(vehicle_raw, dict):
         seats = vehicle_raw.get("passengersCount") or vehicle_raw.get("seats")
@@ -97,7 +110,6 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
                 seats = int(seats)
             except Exception:
                 seats = None
-
     if seats is None:
         for k in ("seats", "seat_count", "capacity"):
             if k in raw:
@@ -107,6 +119,7 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
                 except Exception:
                     pass
 
+    # Luggage
     luggage = None
     if isinstance(vehicle_raw, dict):
         luggage = vehicle_raw.get("bagsCount") or vehicle_raw.get("luggage")
@@ -115,9 +128,7 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
                 luggage = int(luggage)
             except Exception:
                 luggage = None
-
     if luggage is None:
-        # try attributes inside vehicle_raw
         attrs = []
         if isinstance(vehicle_raw, dict) and isinstance(vehicle_raw.get("attributes"), list):
             attrs = vehicle_raw.get("attributes")
@@ -135,124 +146,299 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
 
     return Vehicle(id=str(vid) if vid is not None else None, name=name, price=price, seats=seats, luggage=luggage, raw=deal)
 
+# -----------------------------------------------------------
+# --- DECISION TREE UPSELL SELECTION (UPDATED) ---
+# -----------------------------------------------------------
 
 def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, luggages: int) -> Dict[str, Any]:
-    """Choose best upsell candidate given features.
-
-    Strategy:
-    - Prefer vehicles that satisfy seats >= people and luggage >= luggages
-    - Among those, choose minimal price increase over base
-    - If none satisfy, pick vehicle minimizing total shortage (people_shortage + luggage_shortage) and then minimal price increase
     """
-    best = candidates[0] if candidates else None
-    best_score = None
+    Selects the best upgrade option using a Decision Tree approach.
+    
+    Global Constraints:
+    - Upsell Price MUST be > 0.
+    
+    Decision Rules:
+    1. If people > 2 -> MUST have >= 5 seats.
+    2. If luggages >= 1 -> MUST have >= 4 luggage capacity.
+    3. Among valid matches, prefer the one with the lowest price.
+    """
+    
+    # --- Step 0: Global Filter (Price > 0) ---
+    # We remove any car with price None or <= 0 immediately from consideration.
+    valid_candidates = [
+        v for v in candidates 
+        if v.price is not None and v.price > 0.0
+    ]
+
+    if not valid_candidates:
+        return {"vehicle": None, "reason": "No candidates available with price > 0"}
 
     base_price = base.price or 0.0
 
-    for v in candidates:
-        price = v.price or float("inf")
-        seats = v.seats if v.seats is not None else 0
-        lug = v.luggage if v.luggage is not None else 0
+    # --- Step 1: Define Decision Thresholds ---
+    # Rule 1: People
+    min_seats_required = 5 if people > 2 else people
+    
+    # Rule 2: Luggage
+    min_luggage_required = 4 if luggages >= 1 else luggages
 
-        people_short = max(0, people - seats)
-        lug_short = max(0, luggages - lug)
-        price_diff = max(0.0, price - base_price)
+    # --- Step 2: Filter Candidates (The Decision Tree) ---
+    strict_matches = []
+    
+    for v in valid_candidates:
+        v_seats = v.seats if v.seats is not None else 0
+        v_luggage = v.luggage if v.luggage is not None else 0
+        
+        # Check conditions
+        has_enough_seats = v_seats >= min_seats_required
+        has_enough_luggage = v_luggage >= min_luggage_required
+        
+        if has_enough_seats and has_enough_luggage:
+            strict_matches.append(v)
 
-        # score tuple: prefer zero shortages, then minimal price_diff, then more seats
-        score = (people_short + lug_short, price_diff, -seats)
+    # --- Step 3: Select Best from Filtered List ---
+    best_vehicle = None
+    decision_type = ""
 
-        if best_score is None or score < best_score:
-            best_score = score
-            best = v
+    if strict_matches:
+        # Branch A: We found cars meeting ALL strict rules.
+        # Select the one with the lowest price among them (best value for the user)
+        best_vehicle = sorted(strict_matches, key=lambda x: x.price)[0]
+        decision_type = "strict_rule_match"
+    else:
+        # Branch B: FALLBACK. No car met the strict criteria.
+        # Fallback logic: Prioritize SEATS first (essential).
+        seat_matches = [v for v in valid_candidates if (v.seats or 0) >= min_seats_required]
+        
+        if seat_matches:
+            best_vehicle = sorted(seat_matches, key=lambda x: x.price)[0]
+            decision_type = "fallback_seats_only"
+        else:
+            # Branch C: Deep Fallback. Just return the cheapest candidate remaining (that costs > 0).
+            best_vehicle = sorted(valid_candidates, key=lambda x: x.price)[0]
+            decision_type = "fallback_cheapest"
 
+    price_diff = max(0.0, (best_vehicle.price or 0) - base_price)
+    
     reason = {
         "people": people,
         "luggages": luggages,
-        "base_price": base_price,
-        "chosen_score": best_score,
+        "min_seats_rule": min_seats_required,
+        "min_luggage_rule": min_luggage_required,
+        "decision_path": decision_type,
+        "price_diff": price_diff
     }
-    return {"vehicle": best, "reason": reason}
+    
+    return {"vehicle": best_vehicle, "reason": reason}
 
+# -----------------------------------------------------------
+# --- GENERATE UPSELL REASONS (GEMINI EXCLUSIVE) ---
+# -----------------------------------------------------------
+
+def generate_upsell_reasons(base: Vehicle, upsell: Optional[Vehicle], people: int, luggages: int) -> List[str]:
+    """
+    Generate up to 3 personalized, human-readable reasons to upsell using Gemini.
+    Falls back to a rule-based generator if Gemini fails or API key is missing.
+    """
+    if upsell is None:
+        return []
+
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    
+    # 1. Attempt Gemini Generation
+    if gemini_key:
+        try:
+            return _call_gemini_api(gemini_key, base, upsell, people, luggages)
+        except Exception as e:
+            logger.error(f"Gemini generation failed, falling back to rules: {e}")
+            # Proceed to rule-based fallback below
+    else:
+        logger.warning("GEMINI_API_KEY not found. Using rule-based fallback.")
+
+    # 2. Rule-Based Fallback (if Gemini fails or is missing)
+    return _generate_rules_based_reasons(base, upsell, people, luggages)
+
+
+def _call_gemini_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, luggages: int) -> List[str]:
+    """Internal function to handle the HTTP request to Gemini."""
+    
+    gemini_model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+    base_path = f"https://generativelanguage.googleapis.com/v1/models/{gemini_model}:generateContent"
+    
+    # --- UPDATED PROMPT LOGIC ---
+    system_msg = (
+        "You are a persuasive automotive sales copywriter. You are recommending a premium vehicle upgrade to a customer. "
+        "Your goal is to provide convincing arguments why the user should buy the more expensive car based on their specific needs.\n\n"
+        "GUIDELINES:\n"
+        "1. **NEVER use the word 'upsell'** in the output. Use words like 'upgrade', 'premium', 'spacious', or 'comfort'.\n"
+        "2. Focus on specific benefits: interior space for the specific number of passengers, trunk capacity for their luggage, and premium features (speed, comfort, technology).\n"
+        "3. Tone: Enthusiastic, professional, and convincing.\n"
+        "4. Format: Return ONLY a JSON array of exactly three strings."
+    )
+
+    user_msg = (
+        f"Context: The customer is traveling with {people} people and {luggages} pieces of luggage.\n"
+        f"Current Base Car: {base.name} (Price: {base.price})\n"
+        f"Recommended Upgrade: {upsell.name} (Price: {upsell.price}, Seats: {upsell.seats}, Luggage Capacity: {upsell.luggage})\n\n"
+        "Task: Write 3 persuasive bullet points convincing the customer to choose the Upgrade. "
+        "Highlight spacious interior, trunk space, and premium comfort. "
+        "Output JSON array only."
+    )
+    # ----------------------------
+
+    body = {
+        "contents": [{
+            "parts": [{"text": system_msg + "\n\n" + user_msg}], 
+            "role": "user"
+        }],
+        "config": {
+            "temperature": float(os.environ.get("GEMINI_TEMPERATURE", "0.7"))
+        }
+    }
+
+    # API Call with Retries
+    max_attempts = int(os.environ.get("GEMINI_MAX_RETRIES", "3"))
+    url = f"{base_path}?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+    
+    resp = None
+    last_err = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            resp = requests.post(url, headers=headers, json=body, timeout=10.0)
+            if resp.status_code == 200:
+                break
+            if resp.status_code == 429: # Rate limit
+                time.sleep(2 ** attempt) 
+                continue
+            if 400 <= resp.status_code < 500: # Client error, do not retry
+                break
+        except requests.RequestException as e:
+            last_err = e
+            time.sleep(1.0)
+            
+    if resp is None or resp.status_code != 200:
+        error_detail = resp.text if resp else str(last_err)
+        raise Exception(f"Gemini API Error: {error_detail}")
+
+    # Parse Response
+    try:
+        j = resp.json()
+        # Navigate standard Gemini response structure
+        text = j["candidates"][0]["content"]["parts"][0]["text"]
+        
+        # Regex extract JSON list
+        m = re.search(r"\[.*\]", str(text), flags=re.S)
+        if not m:
+            raise ValueError("No JSON array found in Gemini text")
+        
+        arr = json.loads(m.group(0))
+        if isinstance(arr, list):
+            return [str(x).strip() for x in arr][:3]
+        return []
+    except Exception as e:
+        raise Exception(f"Failed to parse Gemini response: {e}")
+
+def _generate_rules_based_reasons(base: Vehicle, upsell: Vehicle, people: int, luggages: int) -> List[str]:
+    """Fallback logic if AI is unavailable."""
+    reasons: List[str] = []
+    
+    def safe_int(x):
+        return int(x) if x is not None else None
+
+    base_seats = safe_int(base.seats)
+    upsell_seats = safe_int(upsell.seats)
+    base_lug = safe_int(base.luggage)
+    upsell_lug = safe_int(upsell.luggage)
+
+    reasons.append(f"Spacious interior, provides perfect experience for {people} people.")
+    
+    reasons.append(f"Generous trunk space, easily fits all your luggage needs.")
+    
+    reasons.append(f"Enhanced comfort and premium features for a superior driving experience.")
+
+    return reasons[:3]
+
+
+# ------------------------------
+# --- FASTAPI Endpoints ---
+# ------------------------------
 
 @app.get("/api/booking/{booking_id}/recommend")
 def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Optional[int] = Query(None)):
-    """Fetch vehicles for booking and recommend an upsell along with the base car.
-
-    Query params 'people' and 'luggages' can be used to override the mocked feature provider for testing.
-    """
+    """Fetch vehicles for booking and recommend an upsell using Gemini."""
+    
     VEHICLE_API_BASE = "https://hackatum25.sixt.io/"
-
-    # Fetch vehicles from external endpoint
     url = f"{VEHICLE_API_BASE}/api/booking/{booking_id}/vehicles"
+    
     try:
         resp = requests.get(url, timeout=5.0)
-    except requests.RequestException as e:
-        logger.exception("Failed to fetch vehicles")
-        raise HTTPException(status_code=502, detail=f"Failed to fetch vehicles: {e}")
-
-    if resp.status_code != 200:
-        raise HTTPException(status_code=resp.status_code, detail=f"Vehicle service returned {resp.status_code}: {resp.text}")
-
-    try:
+        resp.raise_for_status()
         data = resp.json()
-    except Exception:
-        raise HTTPException(status_code=502, detail="Vehicle service returned non-JSON response")
+    except Exception as e:
+        logger.error(f"Vehicle fetch failed: {e}")
+        raise HTTPException(status_code=502, detail="Failed to fetch vehicles from provider")
 
-    # data might be list or dict
+    # Normalize data structure
     raw_list = []
     if isinstance(data, list):
         raw_list = data
     elif isinstance(data, dict):
-        # common key 'deals' (Sixt hackatum) or 'vehicles'
         if "deals" in data and isinstance(data["deals"], list):
             raw_list = data["deals"]
         elif "vehicles" in data and isinstance(data["vehicles"], list):
             raw_list = data["vehicles"]
         else:
-            # fallback: treat dict as single vehicle/deal
             raw_list = [data]
-    else:
-        raise HTTPException(status_code=502, detail="Unexpected vehicle service payload format")
 
     vehicles = [_extract_vehicle_fields(r) for r in raw_list]
 
-    # determine base car: prefer vehicle with price == 0, else minimum price
-    base_candidates = [v for v in vehicles if (v.price is not None and v.price == 0.0)]
-    if base_candidates:
-        base = base_candidates[0]
-    else:
-        # choose min price
-        sorted_by_price = sorted(vehicles, key=lambda v: (v.price if v.price is not None else float("inf")))
-        base = sorted_by_price[0] if sorted_by_price else None
+    # Select Base Car (lowest price)
+    if not vehicles:
+         raise HTTPException(status_code=404, detail="No vehicles found")
+         
+    sorted_by_price = sorted(vehicles, key=lambda v: (v.price if v.price is not None else float("inf")))
+    base = sorted_by_price[0]
 
-    if base is None:
-        raise HTTPException(status_code=502, detail="No vehicles returned by vehicle service")
-
-    # features (mocked) unless overridden by query params
+    # Mock Features if not provided
     if people is None or luggages is None:
         features = get_features_for_booking(booking_id)
         people = people if people is not None else features.get("numberOfPeople", 1)
         luggages = luggages if luggages is not None else features.get("numberOfLuggages", 0)
 
-    # candidates excluding base
-    other_candidates = [v for v in vehicles if v is not base]
-
+    # Select Upsell
+    other_candidates = [v for v in vehicles if v.id != base.id]
     chosen = choose_best_upsell(base, other_candidates, people, luggages)
+    upsell_vehicle = chosen["vehicle"]
+
+    # Generate AI Reasons
+    ai_reasons = generate_upsell_reasons(base, upsell_vehicle, people, luggages)
 
     resp_payload = {
         "bookingId": booking_id,
         "features_used": {"numberOfPeople": people, "numberOfLuggages": luggages},
         "base_car": base.dict(),
-        "upsell_car": chosen["vehicle"].dict() if chosen["vehicle"] is not None else None,
+        "upsell_car": upsell_vehicle.dict() if upsell_vehicle else None,
         "reason": chosen["reason"],
+        "upsell_reasons": ai_reasons,
     }
 
-    # Persist the latest recommendation to car.json in the server working directory
+    # Save to local file for debug/demo
     try:
         with open("car.json", "w", encoding="utf-8") as fh:
             json.dump(resp_payload, fh, indent=2, ensure_ascii=False)
-        logger.info("Wrote recommendation to car.json")
-    except Exception as e:
-        logger.exception("Failed to write car.json: %s", e)
+    except Exception:
+        pass
 
     return resp_payload
+
+
+@app.get("/health/gemini")
+def gemini_health():
+    """Checks if GEMINI_API_KEY is configured."""
+    key = os.environ.get("GEMINI_API_KEY")
+    return {
+        "gemini_configured": bool(key), 
+        "model": os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+    }

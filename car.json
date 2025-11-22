@@ -1,8 +1,8 @@
 {
   "bookingId": "Q80chI4GLq4d4D3UR9p5",
   "features_used": {
-    "numberOfPeople": 5,
-    "numberOfLuggages": 2
+    "numberOfPeople": 2,
+    "numberOfLuggages": 0
   },
   "base_car": {
     "id": "1a1257a0-e495-43ff-b213-9786338e159b",
@@ -72,38 +72,31 @@
     }
   },
   "upsell_car": {
-    "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
-    "name": "OPEL ASTRA",
-    "price": 48.099999999999994,
+    "id": "afc8d944-b855-4a80-bace-360c43e08411",
+    "name": "SKODA ENYAQ",
+    "price": 47.25,
     "seats": 5,
-    "luggage": 4,
+    "luggage": null,
     "raw": {
       "vehicle": {
-        "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
-        "brand": "OPEL",
-        "model": "ASTRA",
-        "acrissCode": "CWAR",
+        "id": "afc8d944-b855-4a80-bace-360c43e08411",
+        "brand": "SKODA",
+        "model": "ENYAQ",
+        "acrissCode": "SFAE",
         "images": [
-          "https://vehicle-pictures-prod.orange.sixt.com/143056/9d9d9c/18_1.png"
+          "https://vehicle-pictures-prod.orange.sixt.com/142547/ffffff/18_1.png"
         ],
-        "bagsCount": 4,
+        "bagsCount": 0,
         "passengersCount": 5,
-        "groupType": "WAGON",
+        "groupType": "SUV",
         "tyreType": "All-year tyres",
         "transmissionType": "Automatic",
-        "fuelType": "Petrol",
-        "isNewCar": false,
+        "fuelType": "Electric",
+        "isNewCar": true,
         "isRecommended": true,
         "isMoreLuxury": false,
         "isExcitingDiscount": true,
         "attributes": [
-          {
-            "key": "P100_VEHICLE_ATTRIBUTE_AUTOMATIC",
-            "title": "Transmission",
-            "value": "Automatic",
-            "attributeType": "CARD_ATTRIBUTE",
-            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/gearbox_automatic.png"
-          },
           {
             "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
             "title": "Seats",
@@ -112,11 +105,10 @@
             "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png"
           },
           {
-            "key": "P100_VEHICLE_ATTRIBUTE_BOOT_CAPACITY",
-            "title": "Trunk capacity",
-            "value": "4",
-            "attributeType": "CARD_ATTRIBUTE",
-            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/bags.png"
+            "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NEW_VEHICLE",
+            "title": "New vehicle",
+            "value": "New vehicle",
+            "attributeType": "UPSELL_ATTRIBUTE"
           },
           {
             "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NAVIGATION",
@@ -128,27 +120,27 @@
         "vehicleStatus": "AVAILABLE",
         "vehicleCost": {
           "currency": "EUR",
-          "value": 37500
+          "value": 50700
         },
         "upsellReasons": []
       },
       "pricing": {
-        "discountPercentage": 10,
+        "discountPercentage": 30,
         "displayPrice": {
           "currency": "EUR",
-          "amount": 9.62,
+          "amount": 9.45,
           "prefix": "+",
           "suffix": "/day"
         },
         "listPrice": {
           "currency": "EUR",
-          "amount": 10.69,
+          "amount": 13.51,
           "prefix": "+",
           "suffix": "/day"
         },
         "totalPrice": {
           "currency": "EUR",
-          "amount": 48.099999999999994,
+          "amount": 47.25,
           "prefix": "",
           "suffix": "in total"
         }
@@ -159,13 +151,16 @@
     }
   },
   "reason": {
-    "people": 5,
-    "luggages": 2,
-    "base_price": 0.0,
-    "chosen_score": [
-      0,
-      48.099999999999994,
-      -5
-    ]
-  }
+    "people": 2,
+    "luggages": 0,
+    "min_seats_rule": 2,
+    "min_luggage_rule": 0,
+    "decision_path": "strict_rule_match",
+    "price_diff": 47.25
+  },
+  "upsell_reasons": [
+    "Spacious interior, provides perfect experience for 2 people.",
+    "Generous trunk space, easily fits all your luggage needs.",
+    "Enhanced comfort and premium features for a superior driving experience."
+  ]
 }
