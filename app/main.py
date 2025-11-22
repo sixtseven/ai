@@ -490,18 +490,36 @@ def recommend(
     addons_result = []
     if people >= 2:
         try:
-            # Fetch all available addons from the API
-            all_addons = fetch_and_save_addons(booking_id)
-            if isinstance(all_addons, list):
-                # Look for the "Additional Driver" addon
-                for addon in all_addons:
-                    title = addon.get("title") or addon.get("name") or ""
-                    if "driver" in title.lower():
-                        addons_result = [addon]
-                        break
-        except Exception:
-            # Fail silently if addons cannot be fetched
-            pass
+            # Fetch the full JSON data
+            data = fetch_and_save_addons(booking_id)
+            
+            addons_result = []
+            
+            # 1. Check if "addons" key exists and is a list
+            if data and "addons" in data and isinstance(data["addons"], list):
+                
+                # 2. Iterate through the addon GROUPS (e.g., Child seats, General)
+                for group in data["addons"]:
+                    
+                    # 3. Iterate through the OPTIONS inside each group
+                    for option in group.get("options", []):
+                        
+                        # 4. Check the title inside "chargeDetail"
+                        charge_detail = option.get("chargeDetail", {})
+                        title = charge_detail.get("title", "")
+                        
+                        if "additional driver" in title.lower():
+                            addons_result = [option]
+                            break # Stop loop once found
+                    
+                    if addons_result:
+                        break # Stop outer loop if found
+
+            # Output the result
+            print(addons_result)
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     resp_payload = {
         "bookingId": booking_id,
