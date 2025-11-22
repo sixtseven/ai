@@ -6,3 +6,8 @@ Pillow
 scikit-learn
 # Segment Anything (Meta) — install from the repo if pip package not available
 git+https://github.com/facebookresearch/segment-anything.git
+
+# Backend API
+fastapi
+uvicorn[standard]
+requests
