@@ -6,15 +6,13 @@ from typing import Any, Dict, List, Optional
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
-from .features import extract_features_from_buf
 from pydantic import BaseModel
+from .features import extract_features_from_buf
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI(title="Vehicle Upsell Recommender (OpenAI)")
-
-
 
 
 # --- CLASS DEFINITIONS ---
@@ -330,7 +328,7 @@ def _call_openai_api(
         f"Context: The customer is traveling with {people} people and {luggages} pieces of luggage.\n"
         f"Current Base Car: {base.name} (Price: {base.price})\n"
         f"Recommended Upgrade: {upsell.name} (Price: {upsell.price}, Seats: {upsell.seats}, Luggage Capacity: {upsell.luggage})\n\n"
-        "Task: Write 3 persuasive bullet points and 1 summary sentence. "
+        "Task: Write 3 persuasive bullet points and 1 summary string which uses all 3 arguements from the bullet points. This string should result in exactly 3 sentences. "
         "Output valid JSON."
     )
     # ----------------------------
