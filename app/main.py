@@ -1,33 +1,19 @@
 import json
-import logging
 import os
-import random
-import re
 import time
 from typing import Any, Dict, List, Optional
 
 import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
-from features import extract_features_from_buf
 from pydantic import BaseModel
+from .features import extract_features_from_buf
+from .addons import fetch_and_save_addons
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI(title="Vehicle Upsell Recommender (OpenAI)")
-
-# --- LOGGING CONFIGURATION ---
-LOG_FILE = os.environ.get("LOG_FILE", "out.txt")
-logging.basicConfig(
-    level=logging.INFO,
-    filename=LOG_FILE,
-    filemode="a",
-    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    force=True,
-)
-logger = logging.getLogger("uvicorn.error")
-logger.propagate = False
 
 
 # --- CLASS DEFINITIONS ---
@@ -286,13 +272,19 @@ def choose_best_upsell(
 
 def generate_upsell_reasons(
     base: Vehicle, upsell: Optional[Vehicle], people: int, luggages: int
-) -> List[str]:
+) -> Dict[str, Any]:
     """
-    Generate up to 3 personalized reasons to upsell using OpenAI.
+    Generate up to 3 personalized reasons AND a summary sentence using OpenAI.
     Falls back to a rule-based generator if OpenAI fails or API key is missing.
+
+    Returns:
+        {
+            "reasons": List[str],
+            "summary": str
+        }
     """
     if upsell is None:
-        return []
+        return {"reasons": [], "summary": ""}
 
     # Check for OPENAI key
     openai_key = os.environ.get("OPENAI_API_KEY")
@@ -303,12 +295,7 @@ def generate_upsell_reasons(
         try:
             return _call_openai_api(openai_key, base, upsell, people, luggages)
         except Exception as e:
-            logger.error(f"OpenAI generation failed, falling back to rules: {e}")
-            # Proceed to rule-based fallback below
-    else:
-        logger.warning(
-            "OPENAI_API_KEY not found or disabled. Using rule-based fallback."
-        )
+            pass
 
     # 2. Rule-Based Fallback
     return _generate_rules_based_reasons(base, upsell, people, luggages)
@@ -316,8 +303,11 @@ def generate_upsell_reasons(
 
 def _call_openai_api(
     api_key: str, base: Vehicle, upsell: Vehicle, people: int, luggages: int
-) -> List[str]:
-    """Internal function to handle the HTTP request to OpenAI (ChatGPT)."""
+) -> Dict[str, Any]:
+    """
+    Internal function to handle the HTTP request to OpenAI (ChatGPT).
+    Now requests a JSON Object with 'reasons' and 'summary'.
+    """
 
     openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
     url = "https://api.openai.com/v1/chat/completions"
@@ -330,16 +320,17 @@ def _call_openai_api(
         "1. **NEVER use the word 'upsell'** in the output. Use words like 'upgrade', 'premium', 'spacious', or 'comfort'.\n"
         "2. Focus on specific benefits: interior space for the specific number of passengers, trunk capacity for their luggage, and premium features (speed, comfort, technology).\n"
         "3. Tone: Enthusiastic, professional, and convincing.\n"
-        "4. Format: Return ONLY a JSON array of exactly three strings."
+        "4. **FORMAT**: Return ONLY a JSON object with exactly two keys:\n"
+        "   - 'reasons': An array of 3 concise strings (max 10 words each).\n"
+        "   - 'summary': A single, punchy sentence summarizing why they should upgrade.\n"
     )
 
     user_msg = (
         f"Context: The customer is traveling with {people} people and {luggages} pieces of luggage.\n"
         f"Current Base Car: {base.name} (Price: {base.price})\n"
         f"Recommended Upgrade: {upsell.name} (Price: {upsell.price}, Seats: {upsell.seats}, Luggage Capacity: {upsell.luggage})\n\n"
-        "Task: Write 3 persuasive bullet points convincing the customer to choose the Upgrade. "
-        "Highlight spacious interior, trunk space, and premium comfort. "
-        "Output JSON array only."
+        "Task: Write 3 persuasive bullet points and 1 summary string which uses all 3 arguements from the bullet points. This string should result in exactly 3 sentences. "
+        "Output valid JSON."
     )
     # ----------------------------
 
@@ -351,6 +342,7 @@ def _call_openai_api(
             {"role": "system", "content": system_msg},
             {"role": "user", "content": user_msg},
         ],
+        "response_format": {"type": "json_object"},
         "temperature": float(os.environ.get("OPENAI_TEMPERATURE", "0.7")),
     }
 
@@ -383,32 +375,31 @@ def _call_openai_api(
     # Parse Response
     try:
         j = resp.json()
-        # Navigate standard OpenAI response structure
         content = j["choices"][0]["message"]["content"]
 
-        # Regex extract JSON list (safeguard against Markdown code blocks)
-        m = re.search(r"\[.*\]", str(content), flags=re.S)
-        if not m:
-            # Attempt to parse raw if regex fails (sometimes it returns just the array)
-            arr = json.loads(content)
-        else:
-            arr = json.loads(m.group(0))
+        # We requested JSON object, so we can parse directly
+        data = json.loads(content)
 
-        if isinstance(arr, list):
-            return [str(x).strip() for x in arr][:3]
-        return []
+        reasons = data.get("reasons", [])
+        summary = data.get("summary", "")
+
+        # Safeguard types
+        if isinstance(reasons, list):
+            reasons = [str(x).strip() for x in reasons][:3]
+        else:
+            reasons = []
+
+        return {"reasons": reasons, "summary": str(summary).strip()}
+
     except Exception as e:
         raise Exception(f"Failed to parse OpenAI response: {e}")
 
 
 def _generate_rules_based_reasons(
     base: Vehicle, upsell: Vehicle, people: int, luggages: int
-) -> List[str]:
+) -> Dict[str, Any]:
     """Fallback logic if AI is unavailable."""
     reasons: List[str] = []
-
-    def safe_int(x):
-        return int(x) if x is not None else None
 
     reasons.append(
         f"Spacious interior, provides perfect experience for {people} people."
@@ -418,7 +409,9 @@ def _generate_rules_based_reasons(
         f"Enhanced comfort and premium features for a superior driving experience."
     )
 
-    return reasons[:3]
+    summary = f"Upgrade to the {upsell.name or 'premium vehicle'} for a more comfortable journey."
+
+    return {"reasons": reasons[:3], "summary": summary}
 
 
 # ------------------------------
@@ -447,7 +440,6 @@ def recommend(
         except Exception:
             pass
     except Exception as e:
-        logger.error(f"Vehicle fetch failed: {e}")
         raise HTTPException(
             status_code=502, detail="Failed to fetch vehicles from provider"
         )
@@ -491,8 +483,43 @@ def recommend(
     )
     upsell_vehicle = chosen["vehicle"]
 
-    # Generate AI Reasons
-    ai_reasons = generate_upsell_reasons(base, upsell_vehicle, people, luggages)
+    # Generate AI Reasons & Summary
+    ai_output = generate_upsell_reasons(base, upsell_vehicle, people, luggages)
+
+    # --- ADDONS SELECTION LOGIC ---
+    addons_result = []
+    if people >= 2:
+        try:
+            # Fetch the full JSON data
+            data = fetch_and_save_addons(booking_id)
+            
+            addons_result = []
+            
+            # 1. Check if "addons" key exists and is a list
+            if data and "addons" in data and isinstance(data["addons"], list):
+                
+                # 2. Iterate through the addon GROUPS (e.g., Child seats, General)
+                for group in data["addons"]:
+                    
+                    # 3. Iterate through the OPTIONS inside each group
+                    for option in group.get("options", []):
+                        
+                        # 4. Check the title inside "chargeDetail"
+                        charge_detail = option.get("chargeDetail", {})
+                        title = charge_detail.get("title", "")
+                        
+                        if "additional driver" in title.lower():
+                            addons_result = [option]
+                            break # Stop loop once found
+                    
+                    if addons_result:
+                        break # Stop outer loop if found
+
+            # Output the result
+            print(addons_result)
+
+        except Exception as e:
+            print(f"An error occurred: {e}")
 
     resp_payload = {
         "bookingId": booking_id,
@@ -504,7 +531,9 @@ def recommend(
         "base_car": base.dict(),
         "upsell_car": upsell_vehicle.dict() if upsell_vehicle else None,
         "reason": chosen["reason"],
-        "upsell_reasons": ai_reasons,
+        "upsell_reasons": ai_output.get("reasons", []),
+        "upsell_summary": ai_output.get("summary", ""),
+        "addons": addons_result,
     }
 
     # Save to local file for debug/demo

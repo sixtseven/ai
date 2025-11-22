@@ -1,9 +1,9 @@
 {
   "bookingId": "Q80chI4GLq4d4D3UR9p5",
   "features_used": {
-    "number_of_people": 5,
-    "number_of_luggages": 1,
-    "hawaii_shirt_present": true
+    "number_of_people": 0,
+    "number_of_luggages": 0,
+    "hawaii_shirt_present": false
   },
   "base_car": {
     "id": "1a1257a0-e495-43ff-b213-9786338e159b",
@@ -74,55 +74,43 @@
     }
   },
   "upsell_car": {
-    "id": "bb728740-95ac-7a86-2025-087de2dd7a66",
-    "name": "FORD MUSTANG",
-    "price": 93.5,
-    "seats": 4,
+    "id": "afc8d944-b855-4a80-bace-360c43e08411",
+    "name": "SKODA ENYAQ",
+    "price": 47.25,
+    "seats": 5,
     "luggage": null,
-    "upsell_titles": [
-      "Winter Ready Safety",
-      "Convertible Luxury",
-      "Ecoboost Power"
-    ],
+    "upsell_titles": [],
     "raw": {
       "vehicle": {
-        "id": "bb728740-95ac-7a86-2025-087de2dd7a66",
-        "brand": "FORD",
-        "model": "MUSTANG",
-        "modelAnnex": "2.3 ECOBOOST PREMIUM CONVERTIBLE RWD",
-        "acrissCode": "FTAR",
+        "id": "afc8d944-b855-4a80-bace-360c43e08411",
+        "brand": "SKODA",
+        "model": "ENYAQ",
+        "acrissCode": "SFAE",
         "images": [
-          "https://vehicle-pictures-prod.orange.sixt.com/5144354/ffffff/18_1.png"
+          "https://vehicle-pictures-prod.orange.sixt.com/142547/ffffff/18_1.png"
         ],
         "bagsCount": 0,
-        "passengersCount": 4,
-        "groupType": "CONVERTIBLE",
-        "tyreType": "ALL-YEAR_TYRES",
+        "passengersCount": 5,
+        "groupType": "SUV",
+        "tyreType": "All-year tyres",
         "transmissionType": "Automatic",
-        "fuelType": "",
-        "isNewCar": false,
+        "fuelType": "Electric",
+        "isNewCar": true,
         "isRecommended": true,
         "isMoreLuxury": false,
-        "isExcitingDiscount": false,
+        "isExcitingDiscount": true,
         "attributes": [
-          {
-            "key": "P100_VEHICLE_ATTRIBUTE_MILEAGE",
-            "title": "Mileage",
-            "value": "~10k miles",
-            "attributeType": "CARD_ATTRIBUTE",
-            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/speed1.png"
-          },
           {
             "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
             "title": "Seats",
-            "value": "4",
+            "value": "5",
             "attributeType": "CARD_ATTRIBUTE",
             "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png"
           },
           {
-            "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_KEYLESS_IGNITION",
-            "title": "Keyless ignition",
-            "value": "Keyless ignition",
+            "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NEW_VEHICLE",
+            "title": "New vehicle",
+            "value": "New vehicle",
             "attributeType": "UPSELL_ATTRIBUTE"
           },
           {
@@ -134,53 +122,50 @@
         ],
         "vehicleStatus": "AVAILABLE",
         "vehicleCost": {
-          "currency": "USD",
-          "value": 43100
+          "currency": "EUR",
+          "value": 50700
         },
-        "upsellReasons": [
-          {
-            "title": "Winter Ready Safety",
-            "description": "Conquer winter roads confidently with premium tires."
-          },
-          {
-            "title": "Convertible Luxury",
-            "description": "Experience stylish comfort while navigating scenic routes."
-          },
-          {
-            "title": "Ecoboost Power",
-            "description": "Embrace thrilling winter drives with robust horsepower."
-          }
-        ]
+        "upsellReasons": []
       },
       "pricing": {
-        "discountPercentage": 0,
+        "discountPercentage": 30,
         "displayPrice": {
-          "currency": "USD",
-          "amount": 46.75,
+          "currency": "EUR",
+          "amount": 9.45,
+          "prefix": "+",
+          "suffix": "/day"
+        },
+        "listPrice": {
+          "currency": "EUR",
+          "amount": 13.51,
           "prefix": "+",
           "suffix": "/day"
         },
         "totalPrice": {
-          "currency": "USD",
-          "amount": 93.5,
+          "currency": "EUR",
+          "amount": 47.25,
           "prefix": "",
           "suffix": "in total"
         }
       },
       "dealInfo": "DISCOUNT",
-      "tags": []
+      "tags": [],
+      "priceTag": "Online-only price"
     }
   },
   "reason": {
-    "people": 5,
-    "luggages": 1,
-    "decision_path": "hawaii_override_convertible",
-    "description": "Context 'Hawaii' detected. Prioritizing 'Convertible Luxury'.",
-    "price_diff": 93.5
+    "people": 0,
+    "luggages": 0,
+    "min_seats_rule": 0,
+    "min_luggage_rule": 0,
+    "decision_path": "strict_rule_match",
+    "price_diff": 47.25
   },
   "upsell_reasons": [
-    "Spacious interior, provides perfect experience for 5 people.",
-    "Generous trunk space, easily fits all your luggage needs.",
-    "Enhanced comfort and premium features for a superior driving experience."
-  ]
+    "Spacious interior for future passengers",
+    "Advanced tech for a smooth driving experience",
+    "Luxurious comfort for every journey"
+  ],
+  "upsell_summary": "The Skoda Enyaq offers a spacious interior for future passengers, advanced tech for a smooth driving experience, and luxurious comfort for every journey. Make every drive an experience worth remembering. Upgrade today for unmatched quality and style!",
+  "addons": []
 }

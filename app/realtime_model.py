@@ -1,11 +1,18 @@
+import sys
+from pathlib import Path
+
+if __name__ == "__main__" and __package__ is None:
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    __package__ = "app"
+
 import cv2
 import joblib
 import numpy as np
 import torch
 import torch.nn as nn
-from features import extract_features_from_buf
+from .features import extract_features_from_buf
 from PIL import Image
-from state import buf
+from .state import buf
 from torchvision import models, transforms
 from ultralytics.models import YOLO
 from ultralytics.utils import LOGGER
@@ -22,8 +29,7 @@ TARGET_CLASSES = {"person", "backpack", "handbag", "suitcase"}
 CONF_THRESHOLD = 0.5
 
 classNames = model.names if hasattr(model, "names") else list(TARGET_CLASSES)
-
-CLF_PATH = "/home/user/develop/hackatum25/ai/hawaii_frame_clf.joblib"
+CLF_PATH = "hawaii_frame_clf.joblib"
 IMAGE_SIZE = (224, 224)
 
 transform = transforms.Compose(
