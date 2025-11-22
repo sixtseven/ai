@@ -297,12 +297,12 @@ def _generate_rules_based_reasons(base: Vehicle, upsell: Vehicle, people: int, l
     base_lug = safe_int(base.luggage)
     upsell_lug = safe_int(upsell.luggage)
 
-    reasons.append(f"Spacious interior, provides perfect expierence for 4 people.")
+    reasons.append(f"Spacious interior, provides perfect expierence for {people} people.")
     
     reasons.append(f"Generous trunk space, easily fits all your luggage needs.")
     
     reasons.append(f"Enhanced comfort and premium features for a superior driving experience.")
-    
+
     return reasons[:3]
 
 
