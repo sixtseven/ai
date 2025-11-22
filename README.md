@@ -1,6 +1,14 @@
 ## Setup
 Run
 ```bash
+cp .env.example .env
+```
+```bash
+export OPENAI_API_KEY="sk-..."
+```
+
+```bash
+export OPENAI_MODEL="gpt-4o-mini"
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 9000
 ```

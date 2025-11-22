@@ -4,11 +4,29 @@ import logging
 
 import requests
 import json
+import time
+import random
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
+from dotenv import load_dotenv
+load_dotenv()
+
 app = FastAPI(title="Vehicle Upsell Recommender")
+# Configure logging to write to out.txt instead of printing to console.
+# Use basicConfig with force=True to override existing handlers (available on Python 3.8+).
+LOG_FILE = os.environ.get("LOG_FILE", "out.txt")
+logging.basicConfig(
+    level=logging.INFO,
+    filename=LOG_FILE,
+    filemode="a",
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    force=True,
+)
+
+# Ensure uvicorn's logger does not re-add console handlers; get a named logger for use in the app.
 logger = logging.getLogger("uvicorn.error")
+logger.propagate = False
 
 
 class Vehicle(BaseModel):
@@ -174,6 +192,214 @@ def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, lu
     return {"vehicle": best, "reason": reason}
 
 
+def generate_upsell_reasons(base: Vehicle, upsell: Optional[Vehicle], people: int, luggages: int) -> List[str]:
+    """Generate up to 3 personalized, human-readable reasons to upsell.
+
+    Reasons prioritize capacity (seats), luggage space, and useful features/value.
+    """
+    if upsell is None:
+        return []
+
+    # If OPENAI_API_KEY is set and OPENAI_USE is truthy, prefer generating polished upsell points via ChatGPT
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    openai_use_flag = os.environ.get("OPENAI_USE", "1")
+    use_chat = bool(openai_key) and openai_use_flag not in ("0", "false", "False", "no", "NONE", "")
+    if use_chat:
+        try:
+            # prepare a compact payload with necessary fields
+            payload = {
+                "base_car": {
+                    "name": base.name,
+                    "seats": base.seats,
+                    "luggage": base.luggage,
+                    "price": base.price,
+                },
+                "upsell_car": {
+                    "name": upsell.name,
+                    "seats": upsell.seats,
+                    "luggage": upsell.luggage,
+                    "price": upsell.price,
+                },
+                "features": {"people": people, "luggages": luggages}
+            }
+
+            system_msg = (
+                "You are an expert marketing copywriter. Given a customer's current booked car and a recommended upgrade, "
+                "produce exactly three concise, persuasive, and honest upsell bullets that would motivate the customer to choose the upgrade. "
+                "Each bullet should be one sentence, positive, non-judgmental, and relevant to the customer's party size and luggage. "
+                "Return ONLY a JSON array of three strings, no extra text."
+            )
+
+            user_msg = (
+                f"Base car: {json.dumps(payload['base_car'])}\n"
+                f"Upsell car: {json.dumps(payload['upsell_car'])}\n"
+                f"Customer: {people} people, {luggages} luggage items.\n\n"
+                "Provide the three upsell bullets as a JSON array."
+            )
+
+            headers = {
+                "Authorization": f"Bearer {openai_key}",
+                "Content-Type": "application/json",
+            }
+            body = {
+                "model": os.environ.get("OPENAI_MODEL", "gpt-3.5-turbo"),
+                "messages": [
+                    {"role": "system", "content": system_msg},
+                    {"role": "user", "content": user_msg},
+                ],
+                "temperature": 0.8,
+                "max_tokens": 300,
+            }
+
+            logger.info("Calling OpenAI Chat Completions model %s", body.get("model"))
+            # Retry logic for transient errors (429 rate limit, 5xx)
+            max_attempts = int(os.environ.get("OPENAI_MAX_RETRIES", "3"))
+            backoff_base = float(os.environ.get("OPENAI_BACKOFF_BASE", "1.0"))
+            resp = None
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    resp = requests.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers={**headers, "Accept": "application/json"},
+                        json=body,
+                        timeout=15.0,
+                    )
+                    logger.info("OpenAI responded with status %s on attempt %d", resp.status_code, attempt)
+                    # If success or client error other than 429, break
+                    if resp.status_code == 200 or (400 <= resp.status_code < 500 and resp.status_code != 429):
+                        break
+                    # If rate limited (429) or server error (5xx), retry
+                except requests.RequestException as e:
+                    logger.warning("OpenAI request attempt %d failed: %s", attempt, e)
+                    resp = None
+
+                # Exponential backoff with jitter before next attempt
+                if attempt < max_attempts:
+                    sleep_time = backoff_base * (2 ** (attempt - 1)) + random.uniform(0, 0.5)
+                    logger.info("Retrying OpenAI request in %.2fs (attempt %d/%d)", sleep_time, attempt + 1, max_attempts)
+                    time.sleep(sleep_time)
+        except requests.RequestException as e:
+            # Hard fail when OpenAI is configured but cannot be reached
+            logger.exception("OpenAI request failed")
+            raise HTTPException(status_code=502, detail=f"Failed to call OpenAI API: {e}")
+
+        # If OpenAI returned an error status, decide how to proceed
+        if resp is None:
+            logger.error("OpenAI request failed after retries; no response object")
+            raise HTTPException(status_code=502, detail="OpenAI API request failed after retries")
+
+        if resp.status_code == 429:
+            # Rate limit — inform the caller and include response body for debugging
+            logger.error("OpenAI rate limited: %s", resp.text)
+            raise HTTPException(status_code=429, detail=f"OpenAI rate limit: {resp.text}")
+
+        if resp.status_code != 200:
+            logger.error("OpenAI API returned status %s: %s", resp.status_code, resp.text)
+            raise HTTPException(status_code=502, detail=f"OpenAI API error: {resp.status_code}")
+
+        try:
+            j = resp.json()
+            # Extract assistant content
+            content = None
+            try:
+                content = j["choices"][0]["message"]["content"]
+            except Exception:
+                content = j["choices"][0].get("text") if j.get("choices") else None
+
+            if not content:
+                raise HTTPException(status_code=502, detail="OpenAI returned empty completion")
+
+            # The assistant should return a JSON array. Try to parse first JSON block.
+            text = content.strip()
+            import re
+            m = re.search(r"\[.*\]", text, flags=re.S)
+            if not m:
+                raise HTTPException(status_code=502, detail="OpenAI response did not contain a JSON array")
+            arr_text = m.group(0)
+            arr = json.loads(arr_text)
+            if not isinstance(arr, list):
+                raise HTTPException(status_code=502, detail="OpenAI response JSON was not an array")
+            # ensure strings
+            return [str(x).strip() for x in arr][:3]
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.exception("Failed to parse OpenAI response")
+            raise HTTPException(status_code=502, detail=f"Failed to parse OpenAI response: {e}")
+
+    reasons: List[str] = []
+
+    # Helpers
+    def safe_int(x):
+        try:
+            return int(x) if x is not None else None
+        except Exception:
+            return None
+
+    base_seats = safe_int(base.seats)
+    upsell_seats = safe_int(upsell.seats)
+    base_lug = safe_int(base.luggage)
+    upsell_lug = safe_int(upsell.luggage)
+
+    # 1) Capacity reason (people)
+    if upsell_seats is not None and (base_seats is None or upsell_seats >= people and (base_seats < people if base_seats is not None else True)):
+        reasons.append(f"Fits your party: the upsell offers {upsell_seats} seats vs {base_seats or 'fewer'}, for your group of {people} people.")
+
+    # 2) Luggage reason
+    if upsell_lug is not None and (base_lug is None or upsell_lug >= luggages and (base_lug < luggages if base_lug is not None else True)):
+        reasons.append(f"More trunk space: the upsell fits {upsell_lug} bags vs {base_lug or 'less'}, covering your {luggages} luggage items.")
+
+    # 3) Feature/value reason
+    # Inspect upsell.raw for common upsell attributes
+    feature_reasons: List[str] = []
+    try:
+        raw = upsell.raw or {}
+        vehicle = raw.get("vehicle") if isinstance(raw, dict) else None
+        # prefer flags
+        if vehicle and isinstance(vehicle, dict):
+            if vehicle.get("isRecommended"):
+                feature_reasons.append("Recommended vehicle — our system flags this as a good option.")
+            # attributes list
+            attrs = vehicle.get("attributes") or []
+            for a in attrs:
+                title = (a.get("title") or "").lower()
+                val = a.get("value") or ""
+                if "navigation" in title or "built-in navigation" in title:
+                    feature_reasons.append("Includes built-in navigation for easier driving in unfamiliar areas.")
+                if "new vehicle" in title or vehicle.get("isNewCar"):
+                    feature_reasons.append("Newer car model — more comfort and reliability.")
+                if "electric" in (vehicle.get("fuelType") or "").lower():
+                    feature_reasons.append("Electric vehicle — quieter ride and lower local emissions.")
+                if "boot" in title or "trunk" in title or "bags" in title:
+                    # already handled by luggage, but can mention
+                    feature_reasons.append(f"Trunk capacity: {val}.")
+    except Exception:
+        feature_reasons = []
+
+    # Add the top unique feature reasons
+    for fr in feature_reasons:
+        if len(reasons) >= 3:
+            break
+        if fr not in reasons:
+            reasons.append(fr)
+
+    # If still fewer than 3, add a price/value reason
+    if len(reasons) < 3:
+        try:
+            base_price = float(base.price) if base.price is not None else 0.0
+            upsell_price = float(upsell.price) if upsell.price is not None else 0.0
+            price_diff = upsell_price - base_price
+            if price_diff <= 0:
+                reasons.append("No additional daily cost for this upgrade — great value.")
+            else:
+                reasons.append(f"Small price increase of {price_diff:.2f} (total) for more space/features.")
+        except Exception:
+            reasons.append("Upgrade offers more space and comfort compared to your current car.")
+
+    # Ensure at most 3 reasons
+    return reasons[:3]
+
+
 @app.get("/api/booking/{booking_id}/recommend")
 def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Optional[int] = Query(None)):
     """Fetch vehicles for booking and recommend an upsell along with the base car.
@@ -245,6 +471,7 @@ def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Op
         "base_car": base.dict(),
         "upsell_car": chosen["vehicle"].dict() if chosen["vehicle"] is not None else None,
         "reason": chosen["reason"],
+        "upsell_reasons": generate_upsell_reasons(base, chosen["vehicle"], people, luggages),
     }
 
     # Persist the latest recommendation to car.json in the server working directory
@@ -256,3 +483,14 @@ def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Op
         logger.exception("Failed to write car.json: %s", e)
 
     return resp_payload
+
+
+@app.get("/health/openai")
+def openai_health():
+    """Simple health endpoint to check if OPENAI_API_KEY is configured and reachable.
+
+    Returns 200 if OPENAI_API_KEY is set. Does NOT call OpenAI. Use this to confirm server-side config.
+    """
+    key = os.environ.get("OPENAI_API_KEY")
+    enabled = bool(key)
+    return {"openai_configured": enabled, "openai_use_flag": os.environ.get("OPENAI_USE", "1")}
