@@ -146,35 +146,90 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
 
     return Vehicle(id=str(vid) if vid is not None else None, name=name, price=price, seats=seats, luggage=luggage, raw=deal)
 
+# -----------------------------------------------------------
+# --- DECISION TREE UPSELL SELECTION (UPDATED) ---
+# -----------------------------------------------------------
+
 def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, luggages: int) -> Dict[str, Any]:
-    """Selects the best upgrade option based on needs and price."""
-    best = candidates[0] if candidates else None
-    best_score = None
+    """
+    Selects the best upgrade option using a Decision Tree approach.
+    
+    Global Constraints:
+    - Upsell Price MUST be > 0.
+    
+    Decision Rules:
+    1. If people > 2 -> MUST have >= 5 seats.
+    2. If luggages >= 1 -> MUST have >= 4 luggage capacity.
+    3. Among valid matches, prefer the one with the lowest price.
+    """
+    
+    # --- Step 0: Global Filter (Price > 0) ---
+    # We remove any car with price None or <= 0 immediately from consideration.
+    valid_candidates = [
+        v for v in candidates 
+        if v.price is not None and v.price > 0.0
+    ]
+
+    if not valid_candidates:
+        return {"vehicle": None, "reason": "No candidates available with price > 0"}
+
     base_price = base.price or 0.0
 
-    for v in candidates:
-        price = v.price or float("inf")
-        seats = v.seats if v.seats is not None else 0
-        lug = v.luggage if v.luggage is not None else 0
+    # --- Step 1: Define Decision Thresholds ---
+    # Rule 1: People
+    min_seats_required = 5 if people > 2 else people
+    
+    # Rule 2: Luggage
+    min_luggage_required = 4 if luggages >= 1 else luggages
 
-        people_short = max(0, people - seats)
-        lug_short = max(0, luggages - lug)
-        price_diff = max(0.0, price - base_price)
+    # --- Step 2: Filter Candidates (The Decision Tree) ---
+    strict_matches = []
+    
+    for v in valid_candidates:
+        v_seats = v.seats if v.seats is not None else 0
+        v_luggage = v.luggage if v.luggage is not None else 0
+        
+        # Check conditions
+        has_enough_seats = v_seats >= min_seats_required
+        has_enough_luggage = v_luggage >= min_luggage_required
+        
+        if has_enough_seats and has_enough_luggage:
+            strict_matches.append(v)
 
-        # Score: prefer zero shortages, then minimal price difference, then higher seat count
-        score = (people_short + lug_short, price_diff, -seats)
+    # --- Step 3: Select Best from Filtered List ---
+    best_vehicle = None
+    decision_type = ""
 
-        if best_score is None or score < best_score:
-            best_score = score
-            best = v
+    if strict_matches:
+        # Branch A: We found cars meeting ALL strict rules.
+        # Select the one with the lowest price among them (best value for the user)
+        best_vehicle = sorted(strict_matches, key=lambda x: x.price)[0]
+        decision_type = "strict_rule_match"
+    else:
+        # Branch B: FALLBACK. No car met the strict criteria.
+        # Fallback logic: Prioritize SEATS first (essential).
+        seat_matches = [v for v in valid_candidates if (v.seats or 0) >= min_seats_required]
+        
+        if seat_matches:
+            best_vehicle = sorted(seat_matches, key=lambda x: x.price)[0]
+            decision_type = "fallback_seats_only"
+        else:
+            # Branch C: Deep Fallback. Just return the cheapest candidate remaining (that costs > 0).
+            best_vehicle = sorted(valid_candidates, key=lambda x: x.price)[0]
+            decision_type = "fallback_cheapest"
 
+    price_diff = max(0.0, (best_vehicle.price or 0) - base_price)
+    
     reason = {
         "people": people,
         "luggages": luggages,
-        "base_price": base_price,
-        "chosen_score": best_score,
+        "min_seats_rule": min_seats_required,
+        "min_luggage_rule": min_luggage_required,
+        "decision_path": decision_type,
+        "price_diff": price_diff
     }
-    return {"vehicle": best, "reason": reason}
+    
+    return {"vehicle": best_vehicle, "reason": reason}
 
 # -----------------------------------------------------------
 # --- GENERATE UPSELL REASONS (GEMINI EXCLUSIVE) ---
@@ -297,7 +352,7 @@ def _generate_rules_based_reasons(base: Vehicle, upsell: Vehicle, people: int, l
     base_lug = safe_int(base.luggage)
     upsell_lug = safe_int(upsell.luggage)
 
-    reasons.append(f"Spacious interior, provides perfect expierence for {people} people.")
+    reasons.append(f"Spacious interior, provides perfect experience for {people} people.")
     
     reasons.append(f"Generous trunk space, easily fits all your luggage needs.")
     
