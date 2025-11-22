@@ -1,21 +1,22 @@
-from collections import deque
-
 import cv2
 import joblib
 import numpy as np
 import torch
 import torch.nn as nn
+from features import extract_features_from_buf
 from PIL import Image
+from state import buf
 from torchvision import models, transforms
 from ultralytics.models import YOLO
+from ultralytics.utils import LOGGER
 
-buf = deque(maxlen=60)
+LOGGER.setLevel("CRITICAL")
 
 cap = cv2.VideoCapture(0)
 cap.set(3, 1280)
 cap.set(4, 720)
 
-model = YOLO("yolo11n.pt")
+model = YOLO("yolo11n.pt", verbose=False)
 
 TARGET_CLASSES = {"person", "backpack", "handbag", "suitcase"}
 CONF_THRESHOLD = 0.5
@@ -105,13 +106,11 @@ while True:
         prob = clf.predict_proba([emb])[0]
         last_hawaii_pred = bool(int(np.argmax(prob)))
         last_hawaii_prob = float(prob[1])
+        print("Current buf state: ", buf)
         buf.append((person_count, luggage_count, last_hawaii_pred))
 
     hawaii_text = (
         f"Hawaii: {'Yes' if last_hawaii_pred else 'No'} ({last_hawaii_prob:.2f})"
-    )
-    print(
-        f"Persons in frame: {person_count} | Luggage items in frame: {luggage_count} | {hawaii_text}"
     )
 
     summary_text = f"Persons: {person_count}  Luggage: {luggage_count}  {hawaii_text}"
@@ -122,6 +121,8 @@ while True:
     cv2.imshow("Webcam", img)
     if cv2.waitKey(1) == ord("q"):
         break
+
+print("Median Values: ", extract_features_from_buf())
 
 cap.release()
 cv2.destroyAllWindows()
