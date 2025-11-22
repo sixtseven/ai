@@ -264,24 +264,20 @@ def choose_best_upsell(
 
     return {"vehicle": best_vehicle, "reason": reason}
 
-
 # -----------------------------------------------------------
 # --- GENERATE UPSELL REASONS (OPENAI UPDATED) ---
 # -----------------------------------------------------------
 
 
 def generate_upsell_reasons(
-    base: Vehicle, upsell: Optional[Vehicle], people: int, luggages: int
+    base: Vehicle, 
+    upsell: Optional[Vehicle], 
+    people: int, 
+    luggages: int, 
+    hawaii_shirt_present: bool = False
 ) -> Dict[str, Any]:
     """
     Generate up to 3 personalized reasons AND a summary sentence using OpenAI.
-    Falls back to a rule-based generator if OpenAI fails or API key is missing.
-
-    Returns:
-        {
-            "reasons": List[str],
-            "summary": str
-        }
     """
     if upsell is None:
         return {"reasons": [], "summary": ""}
@@ -293,8 +289,10 @@ def generate_upsell_reasons(
     # 1. Attempt OpenAI Generation
     if openai_key and use_openai:
         try:
-            return _call_openai_api(openai_key, base, upsell, people, luggages)
+            # Pass the Hawaii flag down to the API call
+            return _call_openai_api(openai_key, base, upsell, people, luggages, hawaii_shirt_present)
         except Exception as e:
+            print(f"OpenAI Error: {e}") # Good for debugging
             pass
 
     # 2. Rule-Based Fallback
@@ -302,17 +300,22 @@ def generate_upsell_reasons(
 
 
 def _call_openai_api(
-    api_key: str, base: Vehicle, upsell: Vehicle, people: int, luggages: int
+    api_key: str, 
+    base: Vehicle, 
+    upsell: Vehicle, 
+    people: int, 
+    luggages: int, 
+    hawaii_shirt_present: bool
 ) -> Dict[str, Any]:
     """
     Internal function to handle the HTTP request to OpenAI (ChatGPT).
-    Now requests a JSON Object with 'reasons' and 'summary'.
     """
-
     openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
     url = "https://api.openai.com/v1/chat/completions"
-
+    
     # --- PROMPTS ---
+    
+    # Base System Message
     system_msg = (
         "You are a persuasive automotive sales copywriter. You are recommending a premium vehicle upgrade to a customer. "
         "Your goal is to provide convincing arguments why the user should buy the more expensive car based on their specific needs.\n\n"
@@ -325,6 +328,16 @@ def _call_openai_api(
         "   - 'summary': A single, punchy sentence summarizing why they should upgrade.\n"
     )
 
+    # --- HAWAII LOGIC INJECTION ---
+    if hawaii_shirt_present:
+        system_msg += (
+            "\n**CRITICAL CONTEXT**: The customer is wearing a Hawaii shirt. "
+            "You must acknowledge they are on a great vacation. "
+            "Argue that this specific upgrade (especially if it is a convertible) is the **perfect fit** "
+            "to enjoy the sun, the breeze, and the holiday vibes. Make it sound like the ultimate vacation enhancement."
+        )
+    # ------------------------------
+
     user_msg = (
         f"Context: The customer is traveling with {people} people and {luggages} pieces of luggage.\n"
         f"Current Base Car: {base.name} (Price: {base.price})\n"
@@ -332,7 +345,6 @@ def _call_openai_api(
         "Task: Write 3 persuasive bullet points and 1 summary string which uses all 3 arguements from the bullet points. This string should result in exactly 3 sentences. "
         "Output valid JSON."
     )
-    # ----------------------------
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
@@ -362,7 +374,7 @@ def _call_openai_api(
                 continue
             if (
                 400 <= resp.status_code < 500
-            ):  # Client error (e.g., Context length), do not retry
+            ):  # Client error
                 break
         except requests.RequestException as e:
             last_err = e
@@ -376,14 +388,11 @@ def _call_openai_api(
     try:
         j = resp.json()
         content = j["choices"][0]["message"]["content"]
-
-        # We requested JSON object, so we can parse directly
         data = json.loads(content)
 
         reasons = data.get("reasons", [])
         summary = data.get("summary", "")
 
-        # Safeguard types
         if isinstance(reasons, list):
             reasons = [str(x).strip() for x in reasons][:3]
         else:
@@ -484,7 +493,13 @@ def recommend(
     upsell_vehicle = chosen["vehicle"]
 
     # Generate AI Reasons & Summary
-    ai_output = generate_upsell_reasons(base, upsell_vehicle, people, luggages)
+    ai_output = generate_upsell_reasons(
+        base, 
+        upsell_vehicle, 
+        people, 
+        luggages, 
+        hawaii_shirt_present=hawaii_present
+    )
 
     # --- ADDONS SELECTION LOGIC ---
     addons_result = []
