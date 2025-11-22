@@ -2,7 +2,7 @@
   "bookingId": "Q80chI4GLq4d4D3UR9p5",
   "features_used": {
     "numberOfPeople": 5,
-    "numberOfLuggages": 0
+    "numberOfLuggages": 1
   },
   "base_car": {
     "id": "1a1257a0-e495-43ff-b213-9786338e159b",
@@ -72,31 +72,38 @@
     }
   },
   "upsell_car": {
-    "id": "afc8d944-b855-4a80-bace-360c43e08411",
-    "name": "SKODA ENYAQ",
-    "price": 47.25,
+    "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
+    "name": "OPEL ASTRA",
+    "price": 48.099999999999994,
     "seats": 5,
-    "luggage": null,
+    "luggage": 4,
     "raw": {
       "vehicle": {
-        "id": "afc8d944-b855-4a80-bace-360c43e08411",
-        "brand": "SKODA",
-        "model": "ENYAQ",
-        "acrissCode": "SFAE",
+        "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
+        "brand": "OPEL",
+        "model": "ASTRA",
+        "acrissCode": "CWAR",
         "images": [
-          "https://vehicle-pictures-prod.orange.sixt.com/142547/ffffff/18_1.png"
+          "https://vehicle-pictures-prod.orange.sixt.com/143056/9d9d9c/18_1.png"
         ],
-        "bagsCount": 0,
+        "bagsCount": 4,
         "passengersCount": 5,
-        "groupType": "SUV",
+        "groupType": "WAGON",
         "tyreType": "All-year tyres",
         "transmissionType": "Automatic",
-        "fuelType": "Electric",
-        "isNewCar": true,
+        "fuelType": "Petrol",
+        "isNewCar": false,
         "isRecommended": true,
         "isMoreLuxury": false,
         "isExcitingDiscount": true,
         "attributes": [
+          {
+            "key": "P100_VEHICLE_ATTRIBUTE_AUTOMATIC",
+            "title": "Transmission",
+            "value": "Automatic",
+            "attributeType": "CARD_ATTRIBUTE",
+            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/gearbox_automatic.png"
+          },
           {
             "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
             "title": "Seats",
@@ -105,10 +112,11 @@
             "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png"
           },
           {
-            "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NEW_VEHICLE",
-            "title": "New vehicle",
-            "value": "New vehicle",
-            "attributeType": "UPSELL_ATTRIBUTE"
+            "key": "P100_VEHICLE_ATTRIBUTE_BOOT_CAPACITY",
+            "title": "Trunk capacity",
+            "value": "4",
+            "attributeType": "CARD_ATTRIBUTE",
+            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/bags.png"
           },
           {
             "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NAVIGATION",
@@ -120,27 +128,27 @@
         "vehicleStatus": "AVAILABLE",
         "vehicleCost": {
           "currency": "EUR",
-          "value": 50700
+          "value": 37500
         },
         "upsellReasons": []
       },
       "pricing": {
-        "discountPercentage": 30,
+        "discountPercentage": 10,
         "displayPrice": {
           "currency": "EUR",
-          "amount": 9.45,
+          "amount": 9.62,
           "prefix": "+",
           "suffix": "/day"
         },
         "listPrice": {
           "currency": "EUR",
-          "amount": 13.51,
+          "amount": 10.69,
           "prefix": "+",
           "suffix": "/day"
         },
         "totalPrice": {
           "currency": "EUR",
-          "amount": 47.25,
+          "amount": 48.099999999999994,
           "prefix": "",
           "suffix": "in total"
         }
@@ -152,15 +160,15 @@
   },
   "reason": {
     "people": 5,
-    "luggages": 0,
+    "luggages": 1,
     "min_seats_rule": 5,
-    "min_luggage_rule": 0,
+    "min_luggage_rule": 4,
     "decision_path": "strict_rule_match",
-    "price_diff": 47.25
+    "price_diff": 48.099999999999994
   },
   "upsell_reasons": [
-    "Spacious interior for comfortable travel with 5 passengers.",
-    "Enhanced premium comfort for a superior driving experience.",
-    "Advanced technology features for a modern, enjoyable ride."
+    "Spacious interior, provides perfect experience for 5 people.",
+    "Generous trunk space, easily fits all your luggage needs.",
+    "Enhanced comfort and premium features for a superior driving experience."
   ]
 }

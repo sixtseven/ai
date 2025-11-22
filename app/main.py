@@ -360,6 +360,11 @@ def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Op
         resp = requests.get(url, timeout=5.0)
         resp.raise_for_status()
         data = resp.json()
+        try:
+            with open("all_cars.json", "w", encoding="utf-8") as fh:
+                json.dump(data, fh, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
     except Exception as e:
         logger.error(f"Vehicle fetch failed: {e}")
         raise HTTPException(status_code=502, detail="Failed to fetch vehicles from provider")
