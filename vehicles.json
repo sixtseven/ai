@@ -1,0 +1,388 @@
+{
+    "deals": [
+        {
+            "dealInfo": "BOOKED_CATEGORY",
+            "pricing": {
+                "discountPercentage": 0,
+                "displayPrice": {
+                    "amount": 0,
+                    "currency": "EUR",
+                    "prefix": "+",
+                    "suffix": "/day"
+                },
+                "totalPrice": {
+                    "amount": 0,
+                    "currency": "EUR",
+                    "prefix": "",
+                    "suffix": "in total"
+                }
+            },
+            "tags": [],
+            "vehicle": {
+                "acrissCode": "CDAR",
+                "attributes": [
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/gearbox_automatic.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_AUTOMATIC",
+                        "title": "Transmission",
+                        "value": "Automatic"
+                    },
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
+                        "title": "Seats",
+                        "value": "5"
+                    }
+                ],
+                "bagsCount": 0,
+                "brand": "VOLKSWAGEN",
+                "fuelType": "Petrol",
+                "groupType": "SEDAN",
+                "id": "1a1257a0-e495-43ff-b213-9786338e159b",
+                "images": [
+                    "https://vehicle-pictures-prod.orange.sixt.com/143707/9d9d9c/18_1.png"
+                ],
+                "isExcitingDiscount": false,
+                "isMoreLuxury": false,
+                "isNewCar": true,
+                "isRecommended": false,
+                "model": "GOLF",
+                "passengersCount": 5,
+                "transmissionType": "Automatic",
+                "tyreType": "All-year tyres",
+                "upsellReasons": [],
+                "vehicleCost": {
+                    "currency": "EUR",
+                    "value": 36400
+                },
+                "vehicleStatus": "AVAILABLE"
+            }
+        },
+        {
+            "dealInfo": "BOOKED_CATEGORY",
+            "pricing": {
+                "discountPercentage": 0,
+                "displayPrice": {
+                    "amount": 0,
+                    "currency": "EUR",
+                    "prefix": "+",
+                    "suffix": "/day"
+                },
+                "totalPrice": {
+                    "amount": 0,
+                    "currency": "EUR",
+                    "prefix": "",
+                    "suffix": "in total"
+                }
+            },
+            "tags": [],
+            "vehicle": {
+                "acrissCode": "EFAR",
+                "attributes": [
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/gearbox_automatic.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_AUTOMATIC",
+                        "title": "Transmission",
+                        "value": "Automatic"
+                    },
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
+                        "title": "Seats",
+                        "value": "5"
+                    }
+                ],
+                "bagsCount": 0,
+                "brand": "VOLKSWAGEN",
+                "fuelType": "Petrol",
+                "groupType": "SUV",
+                "id": "0bddecb3-202f-4281-8dcb-d41c1fbde6df",
+                "images": [
+                    "https://vehicle-pictures-prod.orange.sixt.com/143456/ffffff/18_1.png"
+                ],
+                "isExcitingDiscount": false,
+                "isMoreLuxury": false,
+                "isNewCar": true,
+                "isRecommended": false,
+                "model": "T-CROSS",
+                "passengersCount": 5,
+                "transmissionType": "Automatic",
+                "tyreType": "All-year tyres",
+                "upsellReasons": [],
+                "vehicleCost": {
+                    "currency": "EUR",
+                    "value": 28800
+                },
+                "vehicleStatus": "AVAILABLE"
+            }
+        },
+        {
+            "dealInfo": "DISCOUNT",
+            "priceTag": "Online-only price",
+            "pricing": {
+                "discountPercentage": 30,
+                "displayPrice": {
+                    "amount": 9.45,
+                    "currency": "EUR",
+                    "prefix": "+",
+                    "suffix": "/day"
+                },
+                "listPrice": {
+                    "amount": 13.51,
+                    "currency": "EUR",
+                    "prefix": "+",
+                    "suffix": "/day"
+                },
+                "totalPrice": {
+                    "amount": 47.25,
+                    "currency": "EUR",
+                    "prefix": "",
+                    "suffix": "in total"
+                }
+            },
+            "tags": [],
+            "vehicle": {
+                "acrissCode": "SFAE",
+                "attributes": [
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
+                        "title": "Seats",
+                        "value": "5"
+                    },
+                    {
+                        "attributeType": "UPSELL_ATTRIBUTE",
+                        "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NEW_VEHICLE",
+                        "title": "New vehicle",
+                        "value": "New vehicle"
+                    },
+                    {
+                        "attributeType": "UPSELL_ATTRIBUTE",
+                        "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NAVIGATION",
+                        "title": "Built-in navigation",
+                        "value": "Built-in navigation"
+                    }
+                ],
+                "bagsCount": 0,
+                "brand": "SKODA",
+                "fuelType": "Electric",
+                "groupType": "SUV",
+                "id": "afc8d944-b855-4a80-bace-360c43e08411",
+                "images": [
+                    "https://vehicle-pictures-prod.orange.sixt.com/142547/ffffff/18_1.png"
+                ],
+                "isExcitingDiscount": true,
+                "isMoreLuxury": false,
+                "isNewCar": true,
+                "isRecommended": true,
+                "model": "ENYAQ",
+                "passengersCount": 5,
+                "transmissionType": "Automatic",
+                "tyreType": "All-year tyres",
+                "upsellReasons": [],
+                "vehicleCost": {
+                    "currency": "EUR",
+                    "value": 50700
+                },
+                "vehicleStatus": "AVAILABLE"
+            }
+        },
+        {
+            "dealInfo": "DISCOUNT",
+            "priceTag": "Online-only price",
+            "pricing": {
+                "discountPercentage": 10,
+                "displayPrice": {
+                    "amount": 9.62,
+                    "currency": "EUR",
+                    "prefix": "+",
+                    "suffix": "/day"
+                },
+                "listPrice": {
+                    "amount": 10.69,
+                    "currency": "EUR",
+                    "prefix": "+",
+                    "suffix": "/day"
+                },
+                "totalPrice": {
+                    "amount": 48.099999999999994,
+                    "currency": "EUR",
+                    "prefix": "",
+                    "suffix": "in total"
+                }
+            },
+            "tags": [],
+            "vehicle": {
+                "acrissCode": "CWAR",
+                "attributes": [
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/gearbox_automatic.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_AUTOMATIC",
+                        "title": "Transmission",
+                        "value": "Automatic"
+                    },
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
+                        "title": "Seats",
+                        "value": "5"
+                    },
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/bags.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_BOOT_CAPACITY",
+                        "title": "Trunk capacity",
+                        "value": "4"
+                    },
+                    {
+                        "attributeType": "UPSELL_ATTRIBUTE",
+                        "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NAVIGATION",
+                        "title": "Built-in navigation",
+                        "value": "Built-in navigation"
+                    }
+                ],
+                "bagsCount": 4,
+                "brand": "OPEL",
+                "fuelType": "Petrol",
+                "groupType": "WAGON",
+                "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
+                "images": [
+                    "https://vehicle-pictures-prod.orange.sixt.com/143056/9d9d9c/18_1.png"
+                ],
+                "isExcitingDiscount": true,
+                "isMoreLuxury": false,
+                "isNewCar": false,
+                "isRecommended": true,
+                "model": "ASTRA",
+                "passengersCount": 5,
+                "transmissionType": "Automatic",
+                "tyreType": "All-year tyres",
+                "upsellReasons": [],
+                "vehicleCost": {
+                    "currency": "EUR",
+                    "value": 37500
+                },
+                "vehicleStatus": "AVAILABLE"
+            }
+        },
+        {
+            "dealInfo": "DISCOUNT",
+            "pricing": {
+                "discountPercentage": 0,
+                "displayPrice": {
+                    "amount": 12.17,
+                    "currency": "EUR",
+                    "prefix": "+",
+                    "suffix": "/day"
+                },
+                "totalPrice": {
+                    "amount": 60.85,
+                    "currency": "EUR",
+                    "prefix": "",
+                    "suffix": "in total"
+                }
+            },
+            "tags": [],
+            "vehicle": {
+                "acrissCode": "IDAH",
+                "attributes": [
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/gearbox_automatic.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_AUTOMATIC",
+                        "title": "Transmission",
+                        "value": "Automatic"
+                    },
+                    {
+                        "attributeType": "CARD_ATTRIBUTE",
+                        "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png",
+                        "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
+                        "title": "Seats",
+                        "value": "5"
+                    },
+                    {
+                        "attributeType": "UPSELL_ATTRIBUTE",
+                        "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_KEYLESS_IGNITION",
+                        "title": "Keyless ignition",
+                        "value": "Keyless ignition"
+                    },
+                    {
+                        "attributeType": "UPSELL_ATTRIBUTE",
+                        "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_BLUETOOTH",
+                        "title": "Bluetooth connectivity",
+                        "value": "Bluetooth connectivity"
+                    }
+                ],
+                "bagsCount": 0,
+                "brand": "PEUGEOT",
+                "fuelType": "Hybrid",
+                "groupType": "SEDAN",
+                "id": "580f3653-c314-49a3-b0fb-9de84498edcf",
+                "images": [
+                    "https://vehicle-pictures-prod.orange.sixt.com/143210/1e1e1e/18_1.png"
+                ],
+                "isExcitingDiscount": false,
+                "isMoreLuxury": false,
+                "isNewCar": false,
+                "isRecommended": true,
+                "model": "408",
+                "passengersCount": 5,
+                "transmissionType": "Automatic",
+                "tyreType": "All-year tyres",
+                "upsellReasons": [],
+                "vehicleCost": {
+                    "currency": "EUR",
+                    "value": 47700
+                },
+                "vehicleStatus": "AVAILABLE"
+            }
+        }
+    ],
+    "filter": {
+        "brands": [
+            "VOLKSWAGEN",
+            "SKODA",
+            "OPEL",
+            "PEUGEOT"
+        ],
+        "fuelTypes": [],
+        "transmissionTypes": []
+    },
+    "isBundleSelected": false,
+    "quickFilters": [
+        {
+            "key": "MCI_P100_QUICKFILTER_RECOMMENDED",
+            "selectType": "SINGLE_SELECT",
+            "title": "Recommended"
+        },
+        {
+            "key": "MCI_P100_QUICKFILTER_EXCITING_DISCOUNTS",
+            "selectType": "SINGLE_SELECT",
+            "title": "Exciting discounts"
+        },
+        {
+            "key": "MCI_P100_QUICKFILTER_NEW_CAR",
+            "selectType": "SINGLE_SELECT",
+            "title": "New vehicle"
+        },
+        {
+            "key": "MCI_P100_QUICKFILTER_ELECTRIC_VEHICLES",
+            "selectType": "SINGLE_SELECT",
+            "title": "Electric"
+        }
+    ],
+    "reservationBlockDateTime": {
+        "date": "2025-11-21T09:47:04+01:00",
+        "timeZone": "Europe/Berlin"
+    },
+    "reservationId": "93SsOwg5PlufcNeArR12",
+    "terminalList": [],
+    "totalVehicles": 16
+}
