@@ -1,15 +1,15 @@
-from typing import Any, Dict, List, Optional
-import os
-import logging
-import requests
 import json
-import time
+import logging
+import os
 import random
 import re
+import time
+from typing import Any, Dict, List, Optional
+
+import requests
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
-
-from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
@@ -28,6 +28,7 @@ logging.basicConfig(
 logger = logging.getLogger("uvicorn.error")
 logger.propagate = False
 
+
 # --- CLASS DEFINITIONS ---
 class Vehicle(BaseModel):
     id: Optional[str] = None
@@ -37,7 +38,9 @@ class Vehicle(BaseModel):
     luggage: Optional[int] = None
     raw: Optional[Dict[str, Any]] = None
 
+
 # --- HELPER FUNCTIONS ---
+
 
 def get_features_for_booking(booking_id: str) -> Dict[str, int]:
     """Mocked features provider."""
@@ -47,14 +50,20 @@ def get_features_for_booking(booking_id: str) -> Dict[str, int]:
         v = 42
     people = 2 + (v % 4)  # 2..5
     luggages = 0 + (v % 3)  # 0..2
-    return {"numberOfPeople": int(people), "numberOfLuggages": int(luggages)}
+    hawaii_shirt_present = False
+    return {
+        "number_of_people": int(people),
+        "number_of_luggages": int(luggages),
+        "hawaii_shirt_present": hawaii_shirt_present,
+    }
+
 
 def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
     """Parses raw vehicle/deal data into a structured Vehicle object."""
     deal = raw
     vehicle_raw = raw
     pricing = None
-    
+
     if isinstance(raw, dict) and "vehicle" in raw:
         vehicle_raw = raw.get("vehicle") or {}
         pricing = raw.get("pricing") or {}
@@ -81,15 +90,28 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
             tp = pricing.get("totalPrice")
             if isinstance(tp, dict) and "amount" in tp:
                 price = float(tp["amount"])
-            elif "displayPrice" in pricing and isinstance(pricing["displayPrice"], dict) and "amount" in pricing["displayPrice"]:
+            elif (
+                "displayPrice" in pricing
+                and isinstance(pricing["displayPrice"], dict)
+                and "amount" in pricing["displayPrice"]
+            ):
                 price = float(pricing["displayPrice"]["amount"])
     except Exception:
         price = None
 
     if price is None:
-        if isinstance(vehicle_raw, dict) and "vehicleCost" in vehicle_raw and isinstance(vehicle_raw["vehicleCost"], dict) and "value" in vehicle_raw["vehicleCost"]:
+        if (
+            isinstance(vehicle_raw, dict)
+            and "vehicleCost" in vehicle_raw
+            and isinstance(vehicle_raw["vehicleCost"], dict)
+            and "value" in vehicle_raw["vehicleCost"]
+        ):
             try:
-                price = float(vehicle_raw["vehicleCost"]["value"]) / 100.0 if vehicle_raw["vehicleCost"]["value"] > 1000 else float(vehicle_raw["vehicleCost"]["value"])
+                price = (
+                    float(vehicle_raw["vehicleCost"]["value"]) / 100.0
+                    if vehicle_raw["vehicleCost"]["value"] > 1000
+                    else float(vehicle_raw["vehicleCost"]["value"])
+                )
             except Exception:
                 price = None
         else:
@@ -130,7 +152,9 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
                 luggage = None
     if luggage is None:
         attrs = []
-        if isinstance(vehicle_raw, dict) and isinstance(vehicle_raw.get("attributes"), list):
+        if isinstance(vehicle_raw, dict) and isinstance(
+            vehicle_raw.get("attributes"), list
+        ):
             attrs = vehicle_raw.get("attributes")
         elif isinstance(raw, dict) and isinstance(raw.get("attributes"), list):
             attrs = raw.get("attributes")
@@ -144,22 +168,30 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
             except Exception:
                 continue
 
-    return Vehicle(id=str(vid) if vid is not None else None, name=name, price=price, seats=seats, luggage=luggage, raw=deal)
+    return Vehicle(
+        id=str(vid) if vid is not None else None,
+        name=name,
+        price=price,
+        seats=seats,
+        luggage=luggage,
+        raw=deal,
+    )
+
 
 # -----------------------------------------------------------
 # --- DECISION TREE UPSELL SELECTION ---
 # -----------------------------------------------------------
 
-def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, luggages: int) -> Dict[str, Any]:
+
+def choose_best_upsell(
+    base: Vehicle, candidates: List[Vehicle], people: int, luggages: int
+) -> Dict[str, Any]:
     """
     Selects the best upgrade option using a Decision Tree approach.
     """
-    
+
     # --- Step 0: Global Filter (Price > 0) ---
-    valid_candidates = [
-        v for v in candidates 
-        if v.price is not None and v.price > 0.0
-    ]
+    valid_candidates = [v for v in candidates if v.price is not None and v.price > 0.0]
 
     if not valid_candidates:
         return {"vehicle": None, "reason": "No candidates available with price > 0"}
@@ -172,15 +204,15 @@ def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, lu
 
     # --- Step 2: Filter Candidates ---
     strict_matches = []
-    
+
     for v in valid_candidates:
         v_seats = v.seats if v.seats is not None else 0
         v_luggage = v.luggage if v.luggage is not None else 0
-        
+
         # Check conditions
         has_enough_seats = v_seats >= min_seats_required
         has_enough_luggage = v_luggage >= min_luggage_required
-        
+
         if has_enough_seats and has_enough_luggage:
             strict_matches.append(v)
 
@@ -193,8 +225,10 @@ def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, lu
         decision_type = "strict_rule_match"
     else:
         # Fallback logic
-        seat_matches = [v for v in valid_candidates if (v.seats or 0) >= min_seats_required]
-        
+        seat_matches = [
+            v for v in valid_candidates if (v.seats or 0) >= min_seats_required
+        ]
+
         if seat_matches:
             best_vehicle = sorted(seat_matches, key=lambda x: x.price)[0]
             decision_type = "fallback_seats_only"
@@ -203,23 +237,27 @@ def choose_best_upsell(base: Vehicle, candidates: List[Vehicle], people: int, lu
             decision_type = "fallback_cheapest"
 
     price_diff = max(0.0, (best_vehicle.price or 0) - base_price)
-    
+
     reason = {
         "people": people,
         "luggages": luggages,
         "min_seats_rule": min_seats_required,
         "min_luggage_rule": min_luggage_required,
         "decision_path": decision_type,
-        "price_diff": price_diff
+        "price_diff": price_diff,
     }
-    
+
     return {"vehicle": best_vehicle, "reason": reason}
+
 
 # -----------------------------------------------------------
 # --- GENERATE UPSELL REASONS (OPENAI UPDATED) ---
 # -----------------------------------------------------------
 
-def generate_upsell_reasons(base: Vehicle, upsell: Optional[Vehicle], people: int, luggages: int) -> List[str]:
+
+def generate_upsell_reasons(
+    base: Vehicle, upsell: Optional[Vehicle], people: int, luggages: int
+) -> List[str]:
     """
     Generate up to 3 personalized reasons to upsell using OpenAI.
     Falls back to a rule-based generator if OpenAI fails or API key is missing.
@@ -230,7 +268,7 @@ def generate_upsell_reasons(base: Vehicle, upsell: Optional[Vehicle], people: in
     # Check for OPENAI key
     openai_key = os.environ.get("OPENAI_API_KEY")
     use_openai = os.environ.get("OPENAI_USE", "1") == "1"
-    
+
     # 1. Attempt OpenAI Generation
     if openai_key and use_openai:
         try:
@@ -239,18 +277,22 @@ def generate_upsell_reasons(base: Vehicle, upsell: Optional[Vehicle], people: in
             logger.error(f"OpenAI generation failed, falling back to rules: {e}")
             # Proceed to rule-based fallback below
     else:
-        logger.warning("OPENAI_API_KEY not found or disabled. Using rule-based fallback.")
+        logger.warning(
+            "OPENAI_API_KEY not found or disabled. Using rule-based fallback."
+        )
 
     # 2. Rule-Based Fallback
     return _generate_rules_based_reasons(base, upsell, people, luggages)
 
 
-def _call_openai_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, luggages: int) -> List[str]:
+def _call_openai_api(
+    api_key: str, base: Vehicle, upsell: Vehicle, people: int, luggages: int
+) -> List[str]:
     """Internal function to handle the HTTP request to OpenAI (ChatGPT)."""
-    
+
     openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
     url = "https://api.openai.com/v1/chat/completions"
-    
+
     # --- PROMPTS ---
     system_msg = (
         "You are a persuasive automotive sales copywriter. You are recommending a premium vehicle upgrade to a customer. "
@@ -273,23 +315,20 @@ def _call_openai_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, 
     )
     # ----------------------------
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     body = {
         "model": openai_model,
         "messages": [
             {"role": "system", "content": system_msg},
-            {"role": "user", "content": user_msg}
+            {"role": "user", "content": user_msg},
         ],
-        "temperature": float(os.environ.get("OPENAI_TEMPERATURE", "0.7"))
+        "temperature": float(os.environ.get("OPENAI_TEMPERATURE", "0.7")),
     }
 
     # API Call with Retries
     max_attempts = int(os.environ.get("OPENAI_MAX_RETRIES", "3"))
-    
+
     resp = None
     last_err = None
 
@@ -298,15 +337,17 @@ def _call_openai_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, 
             resp = requests.post(url, headers=headers, json=body, timeout=10.0)
             if resp.status_code == 200:
                 break
-            if resp.status_code == 429: # Rate limit
-                time.sleep(2 ** attempt) 
+            if resp.status_code == 429:  # Rate limit
+                time.sleep(2**attempt)
                 continue
-            if 400 <= resp.status_code < 500: # Client error (e.g., Context length), do not retry
+            if (
+                400 <= resp.status_code < 500
+            ):  # Client error (e.g., Context length), do not retry
                 break
         except requests.RequestException as e:
             last_err = e
             time.sleep(1.0)
-            
+
     if resp is None or resp.status_code != 200:
         error_detail = resp.text if resp else str(last_err)
         raise Exception(f"OpenAI API Error: {error_detail}")
@@ -316,7 +357,7 @@ def _call_openai_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, 
         j = resp.json()
         # Navigate standard OpenAI response structure
         content = j["choices"][0]["message"]["content"]
-        
+
         # Regex extract JSON list (safeguard against Markdown code blocks)
         m = re.search(r"\[.*\]", str(content), flags=re.S)
         if not m:
@@ -324,23 +365,30 @@ def _call_openai_api(api_key: str, base: Vehicle, upsell: Vehicle, people: int, 
             arr = json.loads(content)
         else:
             arr = json.loads(m.group(0))
-            
+
         if isinstance(arr, list):
             return [str(x).strip() for x in arr][:3]
         return []
     except Exception as e:
         raise Exception(f"Failed to parse OpenAI response: {e}")
 
-def _generate_rules_based_reasons(base: Vehicle, upsell: Vehicle, people: int, luggages: int) -> List[str]:
+
+def _generate_rules_based_reasons(
+    base: Vehicle, upsell: Vehicle, people: int, luggages: int
+) -> List[str]:
     """Fallback logic if AI is unavailable."""
     reasons: List[str] = []
-    
+
     def safe_int(x):
         return int(x) if x is not None else None
 
-    reasons.append(f"Spacious interior, provides perfect experience for {people} people.")
+    reasons.append(
+        f"Spacious interior, provides perfect experience for {people} people."
+    )
     reasons.append(f"Generous trunk space, easily fits all your luggage needs.")
-    reasons.append(f"Enhanced comfort and premium features for a superior driving experience.")
+    reasons.append(
+        f"Enhanced comfort and premium features for a superior driving experience."
+    )
 
     return reasons[:3]
 
@@ -349,13 +397,18 @@ def _generate_rules_based_reasons(base: Vehicle, upsell: Vehicle, people: int, l
 # --- FASTAPI Endpoints ---
 # ------------------------------
 
+
 @app.get("/api/booking/{booking_id}/recommend")
-def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Optional[int] = Query(None)):
+def recommend(
+    booking_id: str,
+    people: Optional[int] = Query(None),
+    luggages: Optional[int] = Query(None),
+):
     """Fetch vehicles for booking and recommend an upsell using OpenAI."""
-    
+
     VEHICLE_API_BASE = "https://hackatum25.sixt.io/"
     url = f"{VEHICLE_API_BASE}/api/booking/{booking_id}/vehicles"
-    
+
     try:
         resp = requests.get(url, timeout=5.0)
         resp.raise_for_status()
@@ -367,7 +420,9 @@ def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Op
             pass
     except Exception as e:
         logger.error(f"Vehicle fetch failed: {e}")
-        raise HTTPException(status_code=502, detail="Failed to fetch vehicles from provider")
+        raise HTTPException(
+            status_code=502, detail="Failed to fetch vehicles from provider"
+        )
 
     # Normalize data structure
     raw_list = []
@@ -385,16 +440,20 @@ def recommend(booking_id: str, people: Optional[int] = Query(None), luggages: Op
 
     # Select Base Car (lowest price)
     if not vehicles:
-         raise HTTPException(status_code=404, detail="No vehicles found")
-         
-    sorted_by_price = sorted(vehicles, key=lambda v: (v.price if v.price is not None else float("inf")))
+        raise HTTPException(status_code=404, detail="No vehicles found")
+
+    sorted_by_price = sorted(
+        vehicles, key=lambda v: (v.price if v.price is not None else float("inf"))
+    )
     base = sorted_by_price[0]
 
     # Mock Features if not provided
     if people is None or luggages is None:
         features = get_features_for_booking(booking_id)
         people = people if people is not None else features.get("numberOfPeople", 1)
-        luggages = luggages if luggages is not None else features.get("numberOfLuggages", 0)
+        luggages = (
+            luggages if luggages is not None else features.get("numberOfLuggages", 0)
+        )
 
     # Select Upsell
     other_candidates = [v for v in vehicles if v.id != base.id]
@@ -427,6 +486,6 @@ def ai_health():
     """Checks if OPENAI_API_KEY is configured."""
     key = os.environ.get("OPENAI_API_KEY")
     return {
-        "openai_configured": bool(key), 
-        "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+        "openai_configured": bool(key),
+        "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
     }

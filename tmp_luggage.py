@@ -7,9 +7,9 @@ import torch
 import torch.nn as nn
 from PIL import Image
 from torchvision import models, transforms
-from ultralytics import YOLO
+from ultralytics.models import YOLO
 
-buf = deque(maxlen=200)
+buf = deque(maxlen=60)
 
 cap = cv2.VideoCapture(0)
 cap.set(3, 1280)
@@ -65,6 +65,7 @@ while True:
 
     person_count = 0
     luggage_count = 0
+    frame_count += 1
 
     for r in results:
         boxes = r.boxes
@@ -99,13 +100,12 @@ while True:
             thickness = 2
             label_text = f"{label_lookup} {confidence:.2f}"
             cv2.putText(img, label_text, org, font, fontScale, color, thickness)
-
-    frame_count += 1
-    if frame_count % 50 == 0:
+    if frame_count % 30 == 0:
         emb = get_embedding_from_frame(img, feature_extractor)
         prob = clf.predict_proba([emb])[0]
         last_hawaii_pred = bool(int(np.argmax(prob)))
         last_hawaii_prob = float(prob[1])
+        buf.append((person_count, luggage_count, last_hawaii_pred))
 
     hawaii_text = (
         f"Hawaii: {'Yes' if last_hawaii_pred else 'No'} ({last_hawaii_prob:.2f})"
@@ -119,7 +119,6 @@ while True:
         img, summary_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2
     )
 
-    buf.append((person_count, luggage_count, last_hawaii_pred))
     cv2.imshow("Webcam", img)
     if cv2.waitKey(1) == ord("q"):
         break
