@@ -1,0 +1,158 @@
+{
+  "addons": [
+    {
+      "id": 0,
+      "name": "",
+      "options": [
+        {
+          "chargeDetail": {
+            "id": "T4",
+            "title": "General Toll Service",
+            "description": "Pay only incurred tolls plus a discounted service fee",
+            "iconUrl": "https://www.sixt.com/shared/icons/rent/circle_plus.png",
+            "tags": []
+          },
+          "additionalInfo": {
+            "price": {
+              "discountPercentage": 0,
+              "displayPrice": {
+                "currency": "USD",
+                "amount": 5.99,
+                "suffix": "/day"
+              }
+            },
+            "isPreviouslySelected": false,
+            "isSelected": false,
+            "isEnabled": true,
+            "selectionStrategy": {
+              "isMultiSelectionAllowed": false,
+              "maxSelectionLimit": 1,
+              "currentSelection": 0
+            },
+            "isNudge": false
+          }
+        },
+        {
+          "chargeDetail": {
+            "id": "AD",
+            "title": "Additional driver",
+            "description": "Share the driving for a safer and more relaxed trip. Each extra driver is charged per day and must show a valid license when picking up the vehicle.",
+            "iconUrl": "https://www.sixt.com/shared/icons/rent/foreign-use.png",
+            "tags": [
+              "AD_FORM_ENABLED"
+            ]
+          },
+          "additionalInfo": {
+            "price": {
+              "discountPercentage": 0,
+              "displayPrice": {
+                "currency": "USD",
+                "amount": 14.99,
+                "suffix": "/day & driver"
+              }
+            },
+            "isPreviouslySelected": false,
+            "isSelected": false,
+            "isEnabled": true,
+            "selectionStrategy": {
+              "isMultiSelectionAllowed": true,
+              "maxSelectionLimit": 8,
+              "currentSelection": 0
+            },
+            "isNudge": false
+          }
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "Child seats",
+      "options": [
+        {
+          "chargeDetail": {
+            "id": "BS",
+            "title": "Infant seat",
+            "description": "For babies up to 15 months old with a height up to 32 inches (81 cm). The seat can only be used rear-facing.",
+            "iconUrl": "https://www.sixt.com/shared/icons/rent/extras/2x/ico_childseat.png",
+            "tags": []
+          },
+          "additionalInfo": {
+            "price": {
+              "discountPercentage": 0,
+              "displayPrice": {
+                "currency": "USD",
+                "amount": 13.99,
+                "suffix": "/day"
+              }
+            },
+            "isPreviouslySelected": false,
+            "isSelected": false,
+            "isEnabled": true,
+            "selectionStrategy": {
+              "isMultiSelectionAllowed": true,
+              "maxSelectionLimit": 3,
+              "currentSelection": 0
+            },
+            "isNudge": false
+          }
+        },
+        {
+          "chargeDetail": {
+            "id": "CS",
+            "title": "Toddler seat",
+            "description": "For children aged between 6 months and 4 years with a height up to 49 inches (124 cm).",
+            "iconUrl": "https://www.sixt.com/shared/icons/rent/extras/2x/ico_childseat.png",
+            "tags": []
+          },
+          "additionalInfo": {
+            "price": {
+              "discountPercentage": 0,
+              "displayPrice": {
+                "currency": "USD",
+                "amount": 13.99,
+                "suffix": "/day"
+              }
+            },
+            "isPreviouslySelected": false,
+            "isSelected": false,
+            "isEnabled": true,
+            "selectionStrategy": {
+              "isMultiSelectionAllowed": true,
+              "maxSelectionLimit": 3,
+              "currentSelection": 0
+            },
+            "isNudge": false
+          }
+        },
+        {
+          "chargeDetail": {
+            "id": "BO",
+            "title": "Booster seat",
+            "description": "For children aged between 4 and 12 years with a height of 43 and 57 inches (110 cm to 145 cm).",
+            "iconUrl": "https://www.sixt.com/shared/icons/rent/extras/2x/ico_childseat.png",
+            "tags": []
+          },
+          "additionalInfo": {
+            "price": {
+              "discountPercentage": 0,
+              "displayPrice": {
+                "currency": "USD",
+                "amount": 13.99,
+                "suffix": "/day"
+              }
+            },
+            "isPreviouslySelected": false,
+            "isSelected": false,
+            "isEnabled": true,
+            "selectionStrategy": {
+              "isMultiSelectionAllowed": true,
+              "maxSelectionLimit": 3,
+              "currentSelection": 0
+            },
+            "isNudge": false
+          }
+        }
+      ]
+    }
+  ]
+}
