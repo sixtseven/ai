@@ -104,14 +104,10 @@ while True:
     if frame_count % 30 == 0:
         emb = get_embedding_from_frame(img, feature_extractor)
         prob = clf.predict_proba([emb])[0]
-        last_hawaii_pred = bool(int(np.argmax(prob)))
         last_hawaii_prob = float(prob[1])
-        print("Current buf state: ", buf)
-        buf.append((person_count, luggage_count, last_hawaii_pred))
+        buf.append((person_count, luggage_count, last_hawaii_prob))
 
-    hawaii_text = (
-        f"Hawaii: {'Yes' if last_hawaii_pred else 'No'} ({last_hawaii_prob:.2f})"
-    )
+    hawaii_text = f"Hawaii: ({last_hawaii_prob:.2f})"
 
     summary_text = f"Persons: {person_count}  Luggage: {luggage_count}  {hawaii_text}"
     cv2.putText(

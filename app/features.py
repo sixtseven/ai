@@ -10,4 +10,4 @@ def extract_features_from_buf() -> tuple[int, int, bool]:
     person_med = medians[0]
     luggage_med = medians[1]
     hawaii_med = medians[2] > 0.75
-    return person_med, luggage_med, hawaii_med
+    return int(person_med), int(luggage_med), bool(hawaii_med)
