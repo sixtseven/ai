@@ -1,5 +1,5 @@
 import numpy as np
-from state import buf
+from .state import buf
 
 
 def extract_features_from_buf() -> tuple[int, int, bool]:
