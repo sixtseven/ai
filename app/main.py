@@ -10,6 +10,7 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from .features import extract_features_from_buf
 from .addons import fetch_and_save_addons
+from app.broadcast_utils import send_broadcast
 
 # Load environment variables
 load_dotenv()
@@ -776,37 +777,9 @@ def trigger_broadcast():
     Sends a UDP broadcast message 'ready' to the network.
     """
     message = b"ready"
-
     try:
-        # Create a new socket for each broadcast
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        
-        # Get the local IP to calculate broadcast address
-        # Connect to external address to find which interface we're using
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.connect(('8.8.8.8', 80))
-            local_ip = s.getsockname()[0]
-        finally:
-            s.close()
-        
-        # Calculate broadcast address from local IP
-        # E.g., if local IP is 10.215.232.123, broadcast is 10.215.232.255
-        ip_parts = local_ip.split('.')
-        broadcast_addr = f"{ip_parts[0]}.{ip_parts[1]}.{ip_parts[2]}.255"
-        
-        # Bind to a specific interface to allow broadcast
-        sock.bind(('', 0))
-        
-        # Send to calculated broadcast address
-        sock.sendto(message, (broadcast_addr, UDP_DESTINATION_PORT))
-        sock.close()
-        
-        print(f'Sent broadcast "{message.decode()}" to {broadcast_addr}:{UDP_DESTINATION_PORT}')
-        return {"success": True, "message": f"Broadcast sent to {broadcast_addr}"}
-
+        send_broadcast(message, UDP_DESTINATION_PORT)
+        return {"success": True, "message": "Broadcast sent"}
     except Exception as e:
         print(f"Error sending broadcast: {e}")
         raise HTTPException(
