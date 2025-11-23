@@ -71,7 +71,8 @@
       },
       "dealInfo": "BOOKED_CATEGORY",
       "tags": []
-    }
+    },
+    "is_expensive": false
   },
   "upsell_car": {
     "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
@@ -159,7 +160,8 @@
       "dealInfo": "DISCOUNT",
       "tags": [],
       "priceTag": "Online-only price"
-    }
+    },
+    "is_expensive": false
   },
   "reason": {
     "people": 3,
@@ -171,10 +173,10 @@
   },
   "upsell_reasons": [
     "Spacious seating for 5 passengers",
-    "Generous trunk for luggage and gear",
-    "Advanced tech for a smooth drive"
+    "Generous trunk capacity for 4 bags",
+    "Advanced tech for ultimate comfort and safety"
   ],
-  "upsell_summary": "Upgrade to the Opel Astra for spacious seating, ample luggage capacity, and cutting-edge technology. Enjoy comfortable rides with your companions. Experience a premium drive that enhances every journey.",
+  "upsell_summary": "Upgrade to the Opel Astra for spacious seating, ample luggage capacity, and cutting-edge technology. Enjoy a comfortable ride with your companions and their belongings. Elevate your driving experience to a whole new level!",
   "addons": [
     {
       "chargeDetail": {
@@ -208,6 +210,6 @@
     }
   ],
   "additional_driver_count": 2,
-  "additional_driver_recommendation": "Currently, only one driver can drive; we recommend adding two additional driver spots for flexibility.",
-  "insurance_recommendation": "I recommend full insurance coverage as accident rates are doubled for drivers under 25."
+  "additional_driver_recommendation": "Currently only one driver can drive. To be more flexible, we recommend adding 2 additional driver spots.",
+  "insurance_recommendation": "For drivers under 25, full insurance is essential due to doubled accident rates."
 }

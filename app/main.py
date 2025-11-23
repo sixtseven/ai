@@ -10,7 +10,6 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from .features import extract_features_from_buf
 from .addons import fetch_and_save_addons
-from app.broadcast_utils import send_broadcast
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +26,7 @@ class Vehicle(BaseModel):
     luggage: Optional[int] = None
     upsell_titles: List[str] = []
     raw: Optional[Dict[str, Any]] = None
+    is_expensive: bool = False
 
 
 # --- HELPER FUNCTIONS ---
@@ -161,6 +161,19 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
             if isinstance(r, dict) and "title" in r:
                 upsell_titles.append(r["title"])
 
+    is_convertible = False
+    
+    # Check in name
+    if name and "convertible" in name.lower():
+        is_convertible = True
+    
+    # Check in upsell titles
+    if not is_convertible:
+        for title in upsell_titles:
+            if "convertible" in title.lower():
+                is_convertible = True
+                break
+
     return Vehicle(
         id=str(vid) if vid is not None else None,
         name=name,
@@ -169,6 +182,7 @@ def _extract_vehicle_fields(raw: Dict[str, Any]) -> Vehicle:
         luggage=luggage,
         upsell_titles=upsell_titles,
         raw=deal,
+        is_expensive=is_convertible 
     )
 
 
