@@ -2,6 +2,7 @@ import json
 import os
 import time
 from typing import Any, Dict, List, Optional
+import socket
 
 import requests
 from dotenv import load_dotenv
@@ -32,6 +33,8 @@ class Vehicle(BaseModel):
 
 def get_features_for_booking() -> Dict[str, Any]:
     people, luggages, hawaii = extract_features_from_buf()
+    people = 3
+    luggages = 1
     return {
         "number_of_people": int(people),
         "number_of_luggages": int(luggages),
@@ -320,7 +323,7 @@ def _call_openai_api(
         "You are a persuasive automotive sales copywriter. You are recommending a premium vehicle upgrade to a customer. "
         "Your goal is to provide convincing arguments why the user should buy the more expensive car based on their specific needs.\n\n"
         "GUIDELINES:\n"
-        "1. **NEVER use the word 'upsell'** in the output. Use words like 'upgrade', 'premium', 'spacious', or 'comfort'.\n"
+        "1. **NEVER use the word 'upsell'** in the output. Use words like 'upgrade' or 'premium'.\n"
         "2. Focus on specific benefits: interior space for the specific number of passengers, trunk capacity for their luggage, and premium features (speed, comfort, technology).\n"
         "3. Tone: Enthusiastic, professional, and convincing.\n"
         "4. **FORMAT**: Return ONLY a JSON object with exactly two keys:\n"
@@ -477,6 +480,7 @@ def recommend(
     base = sorted_by_price[0]
 
     features = get_features_for_booking()
+    print(features)
 
     if people is None:
         people = features.get("number_of_people", 1)
@@ -569,3 +573,31 @@ def ai_health():
         "openai_configured": bool(key),
         "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
     }
+
+
+# --- UDP Configuration ---
+UDP_DESTINATION_PORT = 4210
+BROADCAST_ADDR = '255.255.255.255'
+
+# Create UDP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+@app.post("/trigger-broadcast")
+def trigger_broadcast():
+    """
+    Sends a UDP broadcast message 'ready' to the network.
+    """
+    message = b'ready'
+    
+    try:
+        # Send the broadcast
+        sock.sendto(message, (BROADCAST_ADDR, UDP_DESTINATION_PORT))
+        
+        print(f'Sent broadcast "{message.decode()}" to {BROADCAST_ADDR}:{UDP_DESTINATION_PORT}')
+        return {"success": True, "message": "Broadcast sent"}
+        
+    except Exception as e:
+        print(f"Error sending broadcast: {e}")
+        # In FastAPI, we raise HTTPException for errors
+        raise HTTPException(status_code=500, detail=f"Failed to send broadcast: {str(e)}")
