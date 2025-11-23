@@ -1,8 +1,8 @@
 {
   "bookingId": "Q80chI4GLq4d4D3UR9p5",
   "features_used": {
-    "number_of_people": 0,
-    "number_of_luggages": 0,
+    "number_of_people": 3,
+    "number_of_luggages": 1,
     "hawaii_shirt_present": false
   },
   "base_car": {
@@ -74,32 +74,39 @@
     }
   },
   "upsell_car": {
-    "id": "afc8d944-b855-4a80-bace-360c43e08411",
-    "name": "SKODA ENYAQ",
-    "price": 47.25,
+    "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
+    "name": "OPEL ASTRA",
+    "price": 48.099999999999994,
     "seats": 5,
-    "luggage": null,
+    "luggage": 4,
     "upsell_titles": [],
     "raw": {
       "vehicle": {
-        "id": "afc8d944-b855-4a80-bace-360c43e08411",
-        "brand": "SKODA",
-        "model": "ENYAQ",
-        "acrissCode": "SFAE",
+        "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
+        "brand": "OPEL",
+        "model": "ASTRA",
+        "acrissCode": "CWAR",
         "images": [
-          "https://vehicle-pictures-prod.orange.sixt.com/142547/ffffff/18_1.png"
+          "https://vehicle-pictures-prod.orange.sixt.com/143056/9d9d9c/18_1.png"
         ],
-        "bagsCount": 0,
+        "bagsCount": 4,
         "passengersCount": 5,
-        "groupType": "SUV",
+        "groupType": "WAGON",
         "tyreType": "All-year tyres",
         "transmissionType": "Automatic",
-        "fuelType": "Electric",
-        "isNewCar": true,
+        "fuelType": "Petrol",
+        "isNewCar": false,
         "isRecommended": true,
         "isMoreLuxury": false,
         "isExcitingDiscount": true,
         "attributes": [
+          {
+            "key": "P100_VEHICLE_ATTRIBUTE_AUTOMATIC",
+            "title": "Transmission",
+            "value": "Automatic",
+            "attributeType": "CARD_ATTRIBUTE",
+            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/gearbox_automatic.png"
+          },
           {
             "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
             "title": "Seats",
@@ -108,10 +115,11 @@
             "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png"
           },
           {
-            "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NEW_VEHICLE",
-            "title": "New vehicle",
-            "value": "New vehicle",
-            "attributeType": "UPSELL_ATTRIBUTE"
+            "key": "P100_VEHICLE_ATTRIBUTE_BOOT_CAPACITY",
+            "title": "Trunk capacity",
+            "value": "4",
+            "attributeType": "CARD_ATTRIBUTE",
+            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/bags.png"
           },
           {
             "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NAVIGATION",
@@ -123,27 +131,27 @@
         "vehicleStatus": "AVAILABLE",
         "vehicleCost": {
           "currency": "EUR",
-          "value": 50700
+          "value": 37500
         },
         "upsellReasons": []
       },
       "pricing": {
-        "discountPercentage": 30,
+        "discountPercentage": 10,
         "displayPrice": {
           "currency": "EUR",
-          "amount": 9.45,
+          "amount": 9.62,
           "prefix": "+",
           "suffix": "/day"
         },
         "listPrice": {
           "currency": "EUR",
-          "amount": 13.51,
+          "amount": 10.69,
           "prefix": "+",
           "suffix": "/day"
         },
         "totalPrice": {
           "currency": "EUR",
-          "amount": 47.25,
+          "amount": 48.099999999999994,
           "prefix": "",
           "suffix": "in total"
         }
@@ -154,18 +162,49 @@
     }
   },
   "reason": {
-    "people": 0,
-    "luggages": 0,
-    "min_seats_rule": 0,
-    "min_luggage_rule": 0,
+    "people": 3,
+    "luggages": 1,
+    "min_seats_rule": 5,
+    "min_luggage_rule": 4,
     "decision_path": "strict_rule_match",
-    "price_diff": 47.25
+    "price_diff": 48.099999999999994
   },
   "upsell_reasons": [
-    "Spacious seating for you and your guest",
-    "Premium features for a luxurious driving experience",
-    "Perfect convertible for sunny vacation drives"
+    "Spacious seating for 5 passengers",
+    "Generous trunk for 4 pieces of luggage",
+    "Advanced technology for enhanced driving comfort"
   ],
-  "upsell_summary": "Upgrade to the SKODA ENYAQ for its spacious seating, premium features, and the ultimate convertible experience. Enjoy every moment of your vacation with the sun and breeze. This is the perfect fit for your holiday vibes!",
-  "addons": []
+  "upsell_summary": "Upgrade to the Opel Astra for spacious seating, ample luggage capacity, and cutting-edge technology. With room for everyone and everything, your travels will be hassle-free. Experience the ultimate combination of comfort and convenience on the road!",
+  "addons": [
+    {
+      "chargeDetail": {
+        "id": "AD",
+        "title": "Additional driver",
+        "description": "Share the driving for a safer and more relaxed trip. Each extra driver is charged per day and must show a valid license when picking up the vehicle.",
+        "iconUrl": "https://www.sixt.com/shared/icons/rent/foreign-use.png",
+        "tags": [
+          "AD_FORM_ENABLED"
+        ]
+      },
+      "additionalInfo": {
+        "price": {
+          "discountPercentage": 0,
+          "displayPrice": {
+            "currency": "USD",
+            "amount": 14.99,
+            "suffix": "/day & driver"
+          }
+        },
+        "isPreviouslySelected": false,
+        "isSelected": false,
+        "isEnabled": true,
+        "selectionStrategy": {
+          "isMultiSelectionAllowed": true,
+          "maxSelectionLimit": 8,
+          "currentSelection": 0
+        },
+        "isNudge": false
+      }
+    }
+  ]
 }
