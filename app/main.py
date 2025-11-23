@@ -531,7 +531,6 @@ def generate_insurance_recommendation() -> str:
     """
     Generates a specific insurance recommendation text for young drivers.
     Mentions that accident rates are doubled for people under 25.
-    Limit yourself to 15 words.
     """
     openai_key = os.environ.get("OPENAI_API_KEY")
     use_openai = os.environ.get("OPENAI_USE", "1") == "1"
@@ -563,6 +562,7 @@ def _call_openai_api_for_insurance(api_key: str) -> str:
         "Your goal is to write a single, persuasive sentence recommending full insurance coverage. "
         "You must explicitly mention that for drivers under 25, the number of accidents is statistically doubled. "
         "Keep it polite but clear about the risk."
+        "Limit yourself to 15 words."
     )
 
     user_msg = (
