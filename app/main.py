@@ -544,48 +544,68 @@ def _generate_driver_text_fallback(people: int, count: int) -> str:
 # -----------------------------------------------------------
 
 
-def generate_insurance_recommendation() -> str:
+def generate_insurance_recommendation(is_expensive: bool = False) -> str:
     """
-    Generates a specific insurance recommendation text for young drivers.
-    Mentions that accident rates are doubled for people under 25.
+    Generates a specific insurance recommendation text.
+    - If is_expensive=True: Recommends premium insurance to protect the high-value vehicle.
+    - Else: Recommends insurance based on young driver statistics (accidents doubled under 25).
     """
     openai_key = os.environ.get("OPENAI_API_KEY")
     use_openai = os.environ.get("OPENAI_USE", "1") == "1"
 
     if openai_key and use_openai:
         try:
-            text = _call_openai_api_for_insurance(openai_key)
+            text = _call_openai_api_for_insurance(openai_key, is_expensive)
             if isinstance(text, str) and text.strip():
                 return text.strip()
         except Exception as e:
             print(f"OpenAI insurance recommendation error: {e}")
 
     # Fallback logic if OpenAI fails
-    return (
-        "As a young driver (under 25), statistics show the number of accidents is doubled; "
-        "we strongly recommend our comprehensive insurance package for your peace of mind."
-    )
+    if is_expensive:
+        return (
+            "For such a premium vehicle, we highly recommend our comprehensive coverage "
+            "to ensure your luxury experience remains completely worry-free."
+        )
+    else:
+        return (
+            "As a young driver (under 25), statistics show the number of accidents is doubled; "
+            "we strongly recommend our comprehensive insurance package for your peace of mind."
+        )
 
 
-def _call_openai_api_for_insurance(api_key: str) -> str:
+def _call_openai_api_for_insurance(api_key: str, is_expensive: bool) -> str:
     """
-    Internal call to OpenAI to generate the young driver insurance text.
+    Internal call to OpenAI to generate the insurance text.
+    Adapts prompt based on whether the car is expensive/convertible.
     """
     openai_model = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
     url = "https://api.openai.com/v1/chat/completions"
 
-    system_msg = (
-        "You are a helpful and professional insurance advisor at a car rental company. "
-        "Your goal is to write a single, persuasive sentence recommending full insurance coverage. "
-        "You must explicitly mention that for drivers under 25, the number of accidents is statistically doubled. "
-        "Keep it polite but clear about the risk."
-        "Limit yourself to 10 words."
-    )
-
-    user_msg = (
-        "The customer is under 25 years old. Write a short recommendation (1 sentence) for insurance. "
-        "Emphasize that accident rates are double for this age group."
-    )
+    if is_expensive:
+        system_msg = (
+            "You are a luxury mobility consultant. The customer has selected a high-end vehicle. "
+            "Write a single, sophisticated sentence recommending Premium Insurance. "
+            "Focus on 'protecting this premium experience' and 'peace of mind'. "
+            "Do not mention age statistics. Make it sound exclusive and reassuring. "
+            "Limit yourself to 10 words."
+        )
+        user_msg = (
+            "The customer chose a convertible/expensive car. Recommend full insurance "
+            "to protect this great car and ensure a worry-free trip."
+        )
+    else:
+        system_msg = (
+            "You are a helpful and professional insurance advisor at a car rental company. "
+            "Your goal is to write a single, persuasive sentence recommending full insurance coverage. "
+            "You must explicitly mention that for drivers under 25, the number of accidents is statistically doubled. "
+            "Keep it polite but clear about the risk. "
+            "Limit yourself to 10 words."
+        )
+        user_msg = (
+            "The customer is under 25 years old. Write a short recommendation (1 sentence) for insurance. "
+            "Emphasize that accident rates are double for this age group."
+        )
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     body = {
@@ -742,8 +762,10 @@ def recommend(
     additional_driver_count = additional_driver.get("count", 0)
     additional_driver_recommendation = additional_driver.get("text", "")
 
-    # --- NEW: Insurance Recommendation (Young Driver) ---
-    insurance_text = generate_insurance_recommendation()
+    # --- NEW: Insurance Recommendation (Young vs Expensive) ---
+    # Determine if the upsell car is expensive (convertible)
+    is_expensive_car = upsell_vehicle.is_expensive if upsell_vehicle else False
+    insurance_text = generate_insurance_recommendation(is_expensive=is_expensive_car)
 
     resp_payload = {
         "bookingId": booking_id,
@@ -801,5 +823,4 @@ def trigger_broadcast():
         raise HTTPException(
             status_code=500, detail=f"Failed to send broadcast: {str(e)}"
         )
-
 
