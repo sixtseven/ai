@@ -171,10 +171,10 @@
   },
   "upsell_reasons": [
     "Spacious seating for 5 passengers",
-    "Generous trunk for 4 pieces of luggage",
-    "Advanced technology for enhanced driving comfort"
+    "Ample trunk space for 4 pieces of luggage",
+    "Advanced tech features for a premium driving experience"
   ],
-  "upsell_summary": "Upgrade to the Opel Astra for spacious seating, ample luggage capacity, and cutting-edge technology. With room for everyone and everything, your travels will be hassle-free. Experience the ultimate combination of comfort and convenience on the road!",
+  "upsell_summary": "Upgrade to the Opel Astra for spacious seating, ensuring comfort for everyone. Enjoy generous trunk space for all your luggage, making travel effortless. Plus, experience cutting-edge technology that elevates your driving enjoyment.",
   "addons": [
     {
       "chargeDetail": {
@@ -206,5 +206,8 @@
         "isNudge": false
       }
     }
-  ]
+  ],
+  "additional_driver_count": 2,
+  "additional_driver_recommendation": "Purchase two Additional Driver spots for three people traveling together.",
+  "insurance_recommendation": "Given that drivers under 25 statistically experience double the number of accidents, I highly recommend opting for full insurance coverage to ensure peace of mind and financial protection during your rental period. It's a wise choice to safeguard yourself against potential risks on the road."
 }
