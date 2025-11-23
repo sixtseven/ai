@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
-from ai.app.broadcast_utils import send_broadcast
+from .broadcast_utils import send_broadcast
 from .features import extract_features_from_buf
 from .addons import fetch_and_save_addons
 
