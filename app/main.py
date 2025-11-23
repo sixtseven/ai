@@ -465,14 +465,14 @@ def _call_openai_api_for_drivers(api_key: str, people: int, count: int) -> str:
     url = "https://api.openai.com/v1/chat/completions"
 
     system_msg = (
-        "You are a concise assistant. Produce exactly one short sentence (~10 words) "
+        "You are a concise assistant. Produce exactly one short sentence (~15 words) "
         "that recommends how many Additional Driver spots the customer should buy "
         "based on the number of people. Do not use the word 'upsell'. Keep tone helpful."
     )
 
     user_msg = (
         f"There are {people} people. Recommend how many Additional Driver spots they should buy. "
-        "Return only a single short plain-text sentence, about ten words."
+        "Return only a single short plain-text sentence, about 15 words. E.g. Currently only one driver can drive. To be more flexible, we recommend adding {count-1} additional driver spots."
     )
 
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -562,11 +562,11 @@ def _call_openai_api_for_insurance(api_key: str) -> str:
         "Your goal is to write a single, persuasive sentence recommending full insurance coverage. "
         "You must explicitly mention that for drivers under 25, the number of accidents is statistically doubled. "
         "Keep it polite but clear about the risk."
-        "Limit yourself to 15 words."
+        "Limit yourself to 10 words."
     )
 
     user_msg = (
-        "The customer is under 25 years old. Write a short recommendation (1-2 sentences) for insurance. "
+        "The customer is under 25 years old. Write a short recommendation (1 sentence) for insurance. "
         "Emphasize that accident rates are double for this age group."
     )
 
