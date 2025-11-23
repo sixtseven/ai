@@ -36,8 +36,6 @@ class Vehicle(BaseModel):
 
 def get_features_for_booking() -> Dict[str, Any]:
     people, luggages, hawaii = extract_features_from_buf()
-    people = 3
-    luggages = 1
     return {
         "number_of_people": int(people),
         "number_of_luggages": int(luggages),

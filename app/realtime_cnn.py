@@ -102,6 +102,7 @@ def convnext_worker(frame_queue, result_dict, convnext_model):
 
             # Append to buffer
             buf.append((person_count, luggage_count, prob))
+            # print(f"Buffer updated: persons={person_count}, luggage={luggage_count}, hawaii_prob={prob:.4f}, buffer_len={len(buf)}")
 
             frame_queue.task_done()
         except queue.Empty:
@@ -207,7 +208,7 @@ class VideoApp:
             cv2.putText(img, label_text, org, font, fontScale, color, thickness)
 
         # Queue frame for background ConvNeXt detection (non-blocking)
-        if self.frame_count % 15 == 0:
+        if self.frame_count % 3 == 0:
             try:
                 self.frame_queue.put_nowait((img.copy(), self.person_count, self.luggage_count))
             except queue.Full:
@@ -275,6 +276,10 @@ class VideoApp:
 
 def run_realtime_model_convnext():
     """Main loop for realtime object detection and ConvNeXt classification using Tkinter GUI."""
+    # Clear old buffer data from previous runs
+    print("Clearing old buffer data...")
+    buf.clear()
+
     convnext_model = load_convnext_binary_model()
 
     # Setup background thread for ConvNeXt detection
