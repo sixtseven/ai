@@ -32,6 +32,8 @@ class Vehicle(BaseModel):
 
 def get_features_for_booking() -> Dict[str, Any]:
     people, luggages, hawaii = extract_features_from_buf()
+    people = 3
+    luggages = 1
     return {
         "number_of_people": int(people),
         "number_of_luggages": int(luggages),
@@ -320,7 +322,7 @@ def _call_openai_api(
         "You are a persuasive automotive sales copywriter. You are recommending a premium vehicle upgrade to a customer. "
         "Your goal is to provide convincing arguments why the user should buy the more expensive car based on their specific needs.\n\n"
         "GUIDELINES:\n"
-        "1. **NEVER use the word 'upsell'** in the output. Use words like 'upgrade', 'premium', 'spacious', or 'comfort'.\n"
+        "1. **NEVER use the word 'upsell'** in the output. Use words like 'upgrade' or 'premium'.\n"
         "2. Focus on specific benefits: interior space for the specific number of passengers, trunk capacity for their luggage, and premium features (speed, comfort, technology).\n"
         "3. Tone: Enthusiastic, professional, and convincing.\n"
         "4. **FORMAT**: Return ONLY a JSON object with exactly two keys:\n"
