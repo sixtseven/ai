@@ -172,9 +172,9 @@
   "upsell_reasons": [
     "Spacious seating for 5 passengers",
     "Generous trunk for 4 pieces of luggage",
-    "Advanced technology for enhanced driving comfort"
+    "Advanced technology for safety and comfort"
   ],
-  "upsell_summary": "Upgrade to the Opel Astra for spacious seating, ample luggage capacity, and cutting-edge technology. With room for everyone and everything, your travels will be hassle-free. Experience the ultimate combination of comfort and convenience on the road!",
+  "upsell_summary": "Upgrade to the Opel Astra for spacious seating, ample trunk capacity, and cutting-edge technology. Enjoy every journey with room for everyone and everything. Experience the perfect blend of comfort and performance on the road.",
   "addons": [
     {
       "chargeDetail": {
@@ -206,5 +206,8 @@
         "isNudge": false
       }
     }
-  ]
+  ],
+  "additional_driver_count": 2,
+  "additional_driver_recommendation": "Buy two Additional Driver spots for three people traveling.",
+  "insurance_recommendation": "As drivers under 25 statistically experience double the accident rates, I highly recommend opting for full insurance coverage for your peace of mind. It's a wise choice to protect yourself against potential risks."
 }

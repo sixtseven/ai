@@ -6,12 +6,12 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "app"
 
 import cv2
-import joblib
 import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
-from torchvision import models, transforms
+from torchvision import transforms
+from torchvision.models import convnext_small
 from ultralytics.models import YOLO
 from ultralytics.utils import LOGGER
 
@@ -20,50 +20,70 @@ from .state import buf
 
 LOGGER.setLevel("CRITICAL")
 
+# ---------------------- Config ----------------------
+
+DEVICE = torch.device("cpu")
+MODEL_WEIGHTS_PATH = "convnext_hawaii_binary.pth"
+
 cap = cv2.VideoCapture(0)
 cap.set(3, 1280)
 cap.set(4, 720)
 
-model = YOLO("yolo11n.pt", verbose=False)
+yolo_model = YOLO("yolo11n.pt", verbose=False)
 
 TARGET_CLASSES = {"person", "backpack", "handbag", "suitcase"}
 CONF_THRESHOLD = 0.5
 
-classNames = model.names if hasattr(model, "names") else list(TARGET_CLASSES)
-CLF_PATH = "hawaii_frame_clf.joblib"
+classNames = yolo_model.names if hasattr(yolo_model, "names") else list(TARGET_CLASSES)
+
 IMAGE_SIZE = (224, 224)
 
-transform = transforms.Compose(
+convnext_transform = transforms.Compose(
     [
         transforms.Resize(IMAGE_SIZE),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
+        ),
     ]
 )
 
 
-def load_feature_extractor():
-    backbone = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
-    modules = list(backbone.children())[:-1]
-    fe = nn.Sequential(*modules)
-    fe.eval()
-    return fe
+def load_convnext_binary_model() -> nn.Module:
+    """
+    Load ConvNeXt-small with the binary classification head,
+    then load your trained weights from disk.
+    """
+    model = convnext_small(weights="DEFAULT")
+    model.classifier[2] = nn.Linear(model.classifier[2].in_features, 1)
+
+    state_dict = torch.load(MODEL_WEIGHTS_PATH, map_location=DEVICE)
+    model.load_state_dict(state_dict)
+    model.to(DEVICE)
+    model.eval()
+    return model
 
 
-def get_embedding_from_frame(frame_bgr, feature_extractor):
+def get_hawaii_prob_from_frame(frame_bgr: np.ndarray, model: nn.Module) -> float:
+    """
+    Take a BGR frame (OpenCV), run it through ConvNeXt, and return P(hawaii==1).
+    """
     rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
     img = Image.fromarray(rgb)
-    x = transform(img).unsqueeze(0)
+
+    x = convnext_transform(img).unsqueeze(0).to(DEVICE)
+
     with torch.no_grad():
-        feat = feature_extractor(x)
-        feat = feat.view(1, -1)
-    return feat.cpu().numpy()[0]
+        logits = model(x)
+        prob = torch.sigmoid(logits)[0, 0].item()
+
+    return float(prob)
 
 
-def run_realtime_model():
-    """Main loop for realtime object detection and classification."""
-    clf = joblib.load(CLF_PATH)
-    feature_extractor = load_feature_extractor()
+def run_realtime_model_convnext():
+    """Main loop for realtime object detection and ConvNeXt classification."""
+    model = load_convnext_binary_model()
 
     last_hawaii_prob = 0.0
     frame_count = 0
@@ -74,7 +94,7 @@ def run_realtime_model():
             print("Failed to read from camera")
             break
 
-        results = model(img, stream=True)
+        results = yolo_model(img, stream=True)
 
         person_count = 0
         luggage_count = 0
@@ -115,9 +135,8 @@ def run_realtime_model():
                 cv2.putText(img, label_text, org, font, fontScale, color, thickness)
 
         if frame_count % 8 == 0:
-            emb = get_embedding_from_frame(img, feature_extractor)
-            prob = clf.predict_proba([emb])[0]
-            last_hawaii_prob = float(prob[1])
+            prob = get_hawaii_prob_from_frame(img, model)
+            last_hawaii_prob = prob
             buf.append((person_count, luggage_count, last_hawaii_prob))
 
         hawaii_text = f"Hawaii: ({'True' if last_hawaii_prob >= 0.99 else 'False'} {last_hawaii_prob:.3f})"
@@ -133,6 +152,7 @@ def run_realtime_model():
             (255, 255, 255),
             2,
         )
+
         cv2.imshow("Webcam", img)
         if cv2.waitKey(1) == ord("q"):
             break
@@ -144,4 +164,4 @@ def run_realtime_model():
 
 
 if __name__ == "__main__":
-    run_realtime_model()
+    run_realtime_model_convnext()
