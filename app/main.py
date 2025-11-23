@@ -2,6 +2,7 @@ import json
 import os
 import time
 from typing import Any, Dict, List, Optional
+import socket
 
 import requests
 from dotenv import load_dotenv
@@ -572,3 +573,31 @@ def ai_health():
         "openai_configured": bool(key),
         "model": os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
     }
+
+
+# --- UDP Configuration ---
+UDP_DESTINATION_PORT = 4210
+BROADCAST_ADDR = '255.255.255.255'
+
+# Create UDP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+
+@app.post("/trigger-broadcast")
+def trigger_broadcast():
+    """
+    Sends a UDP broadcast message 'ready' to the network.
+    """
+    message = b'ready'
+    
+    try:
+        # Send the broadcast
+        sock.sendto(message, (BROADCAST_ADDR, UDP_DESTINATION_PORT))
+        
+        print(f'Sent broadcast "{message.decode()}" to {BROADCAST_ADDR}:{UDP_DESTINATION_PORT}')
+        return {"success": True, "message": "Broadcast sent"}
+        
+    except Exception as e:
+        print(f"Error sending broadcast: {e}")
+        # In FastAPI, we raise HTTPException for errors
+        raise HTTPException(status_code=500, detail=f"Failed to send broadcast: {str(e)}")
