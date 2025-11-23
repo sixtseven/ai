@@ -768,11 +768,6 @@ def ai_health():
 
 # --- UDP Configuration ---
 UDP_DESTINATION_PORT = 4210
-BROADCAST_ADDR = "255.255.255.255"
-
-# Create UDP socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
 
 @app.post("/trigger-broadcast")
@@ -783,17 +778,25 @@ def trigger_broadcast():
     message = b"ready"
 
     try:
-        # Send the broadcast
-        sock.sendto(message, (BROADCAST_ADDR, UDP_DESTINATION_PORT))
-
-        print(
-            f'Sent broadcast "{message.decode()}" to {BROADCAST_ADDR}:{UDP_DESTINATION_PORT}'
-        )
+        # Create a new socket for each broadcast
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        
+        # Bind to a specific interface to allow 255.255.255.255 broadcast
+        sock.bind(('', 0))
+        
+        # Send to 255.255.255.255
+        sock.sendto(message, ("10.215.232.255", UDP_DESTINATION_PORT))
+        sock.close()
+        
+        print(f'Sent broadcast "{message.decode()}" to 10.215.232.255:{UDP_DESTINATION_PORT}')
         return {"success": True, "message": "Broadcast sent"}
 
     except Exception as e:
         print(f"Error sending broadcast: {e}")
-        # In FastAPI, we raise HTTPException for errors
         raise HTTPException(
             status_code=500, detail=f"Failed to send broadcast: {str(e)}"
         )
+
+
