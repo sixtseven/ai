@@ -10,7 +10,7 @@ except redis.ConnectionError:
     _redis_client = None
 
 BUF_KEY = "detection_buffer"
-MAX_LEN = 20
+MAX_LEN = 10
 
 
 class SharedBuffer:
