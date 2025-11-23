@@ -60,72 +60,81 @@ def get_embedding_from_frame(frame_bgr, feature_extractor):
     return feat.cpu().numpy()[0]
 
 
-clf = joblib.load(CLF_PATH)
-feature_extractor = load_feature_extractor()
+def run_realtime_model():
+    """Main loop for realtime object detection and classification."""
+    clf = joblib.load(CLF_PATH)
+    feature_extractor = load_feature_extractor()
 
-last_hawaii_pred = False
-last_hawaii_prob = 0.0
-frame_count = 0
+    last_hawaii_pred = False
+    last_hawaii_prob = 0.0
+    frame_count = 0
 
-while True:
-    success, img = cap.read()
-    results = model(img, stream=True)
+    while True:
+        success, img = cap.read()
+        if not success:
+            print("Failed to read from camera")
+            break
+            
+        results = model(img, stream=True)
 
-    person_count = 0
-    luggage_count = 0
-    frame_count += 1
+        person_count = 0
+        luggage_count = 0
+        frame_count += 1
 
-    for r in results:
-        boxes = r.boxes
+        for r in results:
+            boxes = r.boxes
 
-        for box in boxes:
-            x1, y1, x2, y2 = box.xyxy[0]
-            x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+            for box in boxes:
+                x1, y1, x2, y2 = box.xyxy[0]
+                x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
-            confidence = float(box.conf[0])
-            if confidence < CONF_THRESHOLD:
-                continue
+                confidence = float(box.conf[0])
+                if confidence < CONF_THRESHOLD:
+                    continue
 
-            cls = int(box.cls[0])
-            if isinstance(classNames, dict):
-                label_lookup = classNames.get(cls, "")
-            else:
-                label_lookup = classNames[cls] if cls < len(classNames) else ""
+                cls = int(box.cls[0])
+                if isinstance(classNames, dict):
+                    label_lookup = classNames.get(cls, "")
+                else:
+                    label_lookup = classNames[cls] if cls < len(classNames) else ""
 
-            if label_lookup not in TARGET_CLASSES:
-                continue
+                if label_lookup not in TARGET_CLASSES:
+                    continue
 
-            if label_lookup == "person":
-                person_count += 1
-            elif label_lookup in ("backpack", "handbag", "suitcase"):
-                luggage_count += 1
+                if label_lookup == "person":
+                    person_count += 1
+                elif label_lookup in ("backpack", "handbag", "suitcase"):
+                    luggage_count += 1
 
-            cv2.rectangle(img, (x1, y1), (x2, y2), (0, 140, 255), 2)
-            org = (x1, max(y1 - 10, 0))
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            fontScale = 0.7
-            color = (0, 255, 0)
-            thickness = 2
-            label_text = f"{label_lookup} {confidence:.2f}"
-            cv2.putText(img, label_text, org, font, fontScale, color, thickness)
-    if frame_count % 8 == 0:
-        emb = get_embedding_from_frame(img, feature_extractor)
-        prob = clf.predict_proba([emb])[0]
-        last_hawaii_prob = float(prob[1])
-        buf.append((person_count, luggage_count, last_hawaii_prob))
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 140, 255), 2)
+                org = (x1, max(y1 - 10, 0))
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                fontScale = 0.7
+                color = (0, 255, 0)
+                thickness = 2
+                label_text = f"{label_lookup} {confidence:.2f}"
+                cv2.putText(img, label_text, org, font, fontScale, color, thickness)
+                    
+        if frame_count % 8 == 0:
+            emb = get_embedding_from_frame(img, feature_extractor)
+            prob = clf.predict_proba([emb])[0]
+            last_hawaii_prob = float(prob[1])
+            buf.append((person_count, luggage_count, last_hawaii_prob))
 
-    hawaii_text = f"Hawaii: ({'True' if last_hawaii_prob >= 0.99 else 'False'} {last_hawaii_prob:.3f})"
+        hawaii_text = f"Hawaii: ({'True' if last_hawaii_prob >= 0.99 else 'False'} {last_hawaii_prob:.3f})"
+        summary_text = f"Persons: {person_count}  Luggage: {luggage_count}  {hawaii_text}"
+        cv2.putText(
+            img, summary_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2
+        )
+        cv2.imshow("Webcam", img)
+        if cv2.waitKey(1) == ord("q"):
+            break
 
-    summary_text = f"Persons: {person_count}  Luggage: {luggage_count}  {hawaii_text}"
-    cv2.putText(
-        img, summary_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2
-    )
+    print("Median Values: ", extract_features_from_buf())
 
-    cv2.imshow("Webcam", img)
-    if cv2.waitKey(1) == ord("q"):
-        break
+    cap.release()
+    cv2.destroyAllWindows()
 
-print("Median Values: ", extract_features_from_buf())
 
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    run_realtime_model()

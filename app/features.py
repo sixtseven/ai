@@ -6,7 +6,7 @@ from .state import buf
 def extract_features_from_buf() -> tuple[int, int, bool]:
     if len(buf) == 0:
         return 0, 0, False
-    raw_extractions = np.array(buf, dtype=float)
+    raw_extractions = np.array(buf.get_all(), dtype=float)
     medians = np.median(raw_extractions, axis=0)
     person_med = medians[0]
     luggage_med = medians[1]

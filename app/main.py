@@ -477,6 +477,7 @@ def recommend(
     base = sorted_by_price[0]
 
     features = get_features_for_booking()
+    print(features)
 
     if people is None:
         people = features.get("number_of_people", 1)
