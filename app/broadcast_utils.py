@@ -1,5 +1,6 @@
 import socket
 import netifaces
+import time
 
 def get_default_broadcast():
     gws = netifaces.gateways()
@@ -12,5 +13,7 @@ def send_broadcast(msg: bytes, port: int):
     print(f"Broadcasting to {broadcast_ip}:{port}")
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    sock.sendto(msg, (broadcast_ip, port))
+    for _ in range(5):
+        sock.sendto(msg, (broadcast_ip, port))
+        time.sleep(0.1)
     sock.close()
