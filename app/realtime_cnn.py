@@ -35,7 +35,7 @@ cap.set(4, 720)
 model = YOLO("yolo11n.pt", verbose=False)
 
 TARGET_CLASSES = {"person", "backpack", "handbag", "suitcase"}
-CONF_THRESHOLD = 0.5
+CONF_THRESHOLD = 0.4
 
 classNames = model.names if hasattr(model, "names") else list(TARGET_CLASSES)
 
@@ -217,7 +217,7 @@ class VideoApp:
         # Read last result from background thread
         last_hawaii_prob = self.result_dict['last_hawaii_prob']
 
-        hawaii_text = f"Hawaii: ({'True' if last_hawaii_prob >= 0.99 else 'False'} {last_hawaii_prob:.3f})"
+        hawaii_text = f"Hawaii: ({'True' if last_hawaii_prob >= 0.9 else 'False'} {last_hawaii_prob:.3f})"
         summary_text = (
             f"Persons: {self.person_count}  Luggage: {self.luggage_count}  {hawaii_text}"
         )

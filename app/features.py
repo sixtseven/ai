@@ -10,5 +10,5 @@ def extract_features_from_buf() -> tuple[int, int, bool]:
     medians = np.median(raw_extractions, axis=0)
     person_med = medians[0]
     luggage_med = medians[1]
-    hawaii_med = medians[2] > 0.99
+    hawaii_med = medians[2] > 0.9
     return int(person_med), int(luggage_med), bool(hawaii_med)

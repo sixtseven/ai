@@ -27,7 +27,7 @@ cap.set(4, 720)
 model = YOLO("yolo11n.pt", verbose=False)
 
 TARGET_CLASSES = {"person", "backpack", "handbag", "suitcase"}
-CONF_THRESHOLD = 0.5
+CONF_THRESHOLD = 0.4
 
 classNames = model.names if hasattr(model, "names") else list(TARGET_CLASSES)
 CLF_PATH = "hawaii_frame_clf.joblib"
