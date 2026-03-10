@@ -1,9 +1,9 @@
 {
-  "bookingId": "Q80chI4GLq4d4D3UR9p5",
+  "bookingId": "HTceIcGnLQ31OXj8id2X",
   "features_used": {
     "number_of_people": 3,
-    "number_of_luggages": 1,
-    "hawaii_shirt_present": false
+    "number_of_luggages": 0,
+    "hawaii_shirt_present": true
   },
   "base_car": {
     "id": "1a1257a0-e495-43ff-b213-9786338e159b",
@@ -75,52 +75,56 @@
     "is_expensive": false
   },
   "upsell_car": {
-    "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
-    "name": "OPEL ASTRA",
-    "price": 48.099999999999994,
-    "seats": 5,
-    "luggage": 4,
-    "upsell_titles": [],
+    "id": "bb728740-95ac-7a86-2025-087de2dd7a66",
+    "name": "FORD MUSTANG",
+    "price": 93.5,
+    "seats": 4,
+    "luggage": null,
+    "upsell_titles": [
+      "Winter Ready Safety",
+      "Convertible Luxury",
+      "Ecoboost Power"
+    ],
     "raw": {
       "vehicle": {
-        "id": "138cc34b-7c44-4a0d-aa4f-346d0780a68d",
-        "brand": "OPEL",
-        "model": "ASTRA",
-        "acrissCode": "CWAR",
+        "id": "bb728740-95ac-7a86-2025-087de2dd7a66",
+        "brand": "FORD",
+        "model": "MUSTANG",
+        "modelAnnex": "2.3 ECOBOOST PREMIUM CONVERTIBLE RWD",
+        "acrissCode": "FTAR",
         "images": [
-          "https://vehicle-pictures-prod.orange.sixt.com/143056/9d9d9c/18_1.png"
+          "https://vehicle-pictures-prod.orange.sixt.com/5144354/ffffff/18_1.png"
         ],
-        "bagsCount": 4,
-        "passengersCount": 5,
-        "groupType": "WAGON",
-        "tyreType": "All-year tyres",
+        "bagsCount": 0,
+        "passengersCount": 4,
+        "groupType": "CONVERTIBLE",
+        "tyreType": "ALL-YEAR_TYRES",
         "transmissionType": "Automatic",
-        "fuelType": "Petrol",
+        "fuelType": "",
         "isNewCar": false,
         "isRecommended": true,
         "isMoreLuxury": false,
-        "isExcitingDiscount": true,
+        "isExcitingDiscount": false,
         "attributes": [
           {
-            "key": "P100_VEHICLE_ATTRIBUTE_AUTOMATIC",
-            "title": "Transmission",
-            "value": "Automatic",
+            "key": "P100_VEHICLE_ATTRIBUTE_MILEAGE",
+            "title": "Mileage",
+            "value": "~10k miles",
             "attributeType": "CARD_ATTRIBUTE",
-            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/gearbox_automatic.png"
+            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/speed1.png"
           },
           {
             "key": "P100_VEHICLE_ATTRIBUTE_SEATS",
             "title": "Seats",
-            "value": "5",
+            "value": "4",
             "attributeType": "CARD_ATTRIBUTE",
             "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/seat.png"
           },
           {
-            "key": "P100_VEHICLE_ATTRIBUTE_BOOT_CAPACITY",
-            "title": "Trunk capacity",
-            "value": "4",
-            "attributeType": "CARD_ATTRIBUTE",
-            "iconUrl": "https://www.sixt.com/shared/icons/trex/p100/bags.png"
+            "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_KEYLESS_IGNITION",
+            "title": "Keyless ignition",
+            "value": "Keyless ignition",
+            "attributeType": "UPSELL_ATTRIBUTE"
           },
           {
             "key": "P100_VEHICLE_UPSELL_ATTRIBUTE_NAVIGATION",
@@ -131,52 +135,57 @@
         ],
         "vehicleStatus": "AVAILABLE",
         "vehicleCost": {
-          "currency": "EUR",
-          "value": 37500
+          "currency": "USD",
+          "value": 43100
         },
-        "upsellReasons": []
+        "upsellReasons": [
+          {
+            "title": "Winter Ready Safety",
+            "description": "Conquer winter roads confidently with premium tires."
+          },
+          {
+            "title": "Convertible Luxury",
+            "description": "Experience stylish comfort while navigating scenic routes."
+          },
+          {
+            "title": "Ecoboost Power",
+            "description": "Embrace thrilling winter drives with robust horsepower."
+          }
+        ]
       },
       "pricing": {
-        "discountPercentage": 10,
+        "discountPercentage": 0,
         "displayPrice": {
-          "currency": "EUR",
-          "amount": 9.62,
-          "prefix": "+",
-          "suffix": "/day"
-        },
-        "listPrice": {
-          "currency": "EUR",
-          "amount": 10.69,
+          "currency": "USD",
+          "amount": 46.75,
           "prefix": "+",
           "suffix": "/day"
         },
         "totalPrice": {
-          "currency": "EUR",
-          "amount": 48.099999999999994,
+          "currency": "USD",
+          "amount": 93.5,
           "prefix": "",
           "suffix": "in total"
         }
       },
       "dealInfo": "DISCOUNT",
-      "tags": [],
-      "priceTag": "Online-only price"
+      "tags": []
     },
-    "is_expensive": false
+    "is_expensive": true
   },
   "reason": {
     "people": 3,
-    "luggages": 1,
-    "min_seats_rule": 5,
-    "min_luggage_rule": 4,
-    "decision_path": "strict_rule_match",
-    "price_diff": 48.099999999999994
+    "luggages": 0,
+    "decision_path": "hawaii_override_convertible",
+    "description": "Context 'Hawaii' detected. Prioritizing 'Convertible Luxury'.",
+    "price_diff": 93.5
   },
   "upsell_reasons": [
-    "Spacious seating for 5 passengers",
-    "Generous trunk capacity for 4 bags",
-    "Advanced tech for ultimate comfort and safety"
+    "Spacious seating for you and three friends.",
+    "Enjoy the thrill of a premium convertible ride.",
+    "Perfect for soaking up the sun and holiday vibes."
   ],
-  "upsell_summary": "Upgrade to the Opel Astra for spacious seating, ample luggage capacity, and cutting-edge technology. Enjoy a comfortable ride with your companions and their belongings. Elevate your driving experience to a whole new level!",
+  "upsell_summary": "Upgrade to the Ford Mustang for a spacious ride. Experience the thrill of a premium convertible. It's the ultimate way to enjoy your vacation in style!",
   "addons": [
     {
       "chargeDetail": {
@@ -210,6 +219,6 @@
     }
   ],
   "additional_driver_count": 2,
-  "additional_driver_recommendation": "Currently only one driver can drive. To be more flexible, we recommend adding 2 additional driver spots.",
-  "insurance_recommendation": "For drivers under 25, full insurance is essential due to doubled accident rates."
+  "additional_driver_recommendation": "Currently, only one driver can drive. To be more flexible, we recommend adding 2 additional driver spots.",
+  "insurance_recommendation": "Choose Premium Insurance for peace of mind and ultimate protection."
 }
